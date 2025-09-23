@@ -1,0 +1,7 @@
+﻿services:
+  backend-tenty:
+    image: backend-tenty
+    build:
+      context: .
+      dockerfile: backend-tenty/Dockerfile
+
