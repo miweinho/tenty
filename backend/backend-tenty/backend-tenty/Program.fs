@@ -14,27 +14,32 @@ open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
+open backend_tenty.Database
 
 module Program =
     let exitCode = 0
 
     [<EntryPoint>]
     let main args =
+        printfn "Starting Tenty Backend..."
+        if Database.testConnection() then
+            printfn "Database ready"
+            let builder = WebApplication.CreateBuilder(args)
 
-        let builder = WebApplication.CreateBuilder(args)
+            builder.Services.AddControllers()
+            builder.Services.AddSwaggerGen()
 
-        builder.Services.AddControllers()
-        builder.Services.AddSwaggerGen()
+            let app = builder.Build()
 
-        let app = builder.Build()
+            app.UseSwagger()
+            app.UseSwaggerUI()
+            app.UseHttpsRedirection()
 
-        app.UseSwagger()
-        app.UseSwaggerUI()
-        app.UseHttpsRedirection()
+            app.UseAuthorization()
+            app.MapControllers()
 
-        app.UseAuthorization()
-        app.MapControllers()
-
-        app.Run()
+            app.Run()
+        else
+            printfn "Database connection failed - exiting"
 
         exitCode

@@ -12,8 +12,11 @@
   
 
     <ItemGroup>
+        <Compile Include="Model/Model.fs" />
+        <Compile Include="Database\Database.fs" />
         <Compile Include="WeatherForecast.fs" />
         <Compile Include="Controllers/WeatherForecastController.fs" />
+        <Compile Include="Controllers\Camp.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 
@@ -26,6 +29,11 @@
 
     <ItemGroup>
       <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.4" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Npgsql" Version="8.0.5" />
+        <PackageReference Include="Npgsql.FSharp" Version="5.7.0" />
     </ItemGroup>
 
 </Project>
