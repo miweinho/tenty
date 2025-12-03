@@ -38,3 +38,20 @@ let ``invalid middle treated as missing when first+last valid`` (f:string) (m:st
         let res = validateName f (Some m) l
         res = Ok { FirstName = f'; MiddleName = None; LastName = l' }
     | _ -> true
+
+[<Fact>]
+let ``valid email returns MailInformation`` () =
+    match validateMail "john.doe@example.com" with
+    | Ok info -> Assert.Equal("john.doe@example.com", info.MailAddress.Address)
+    | Error err -> failwithf "Expected Ok but got Error: %s" err
+
+[<Theory>]
+[<InlineData("")>]
+[<InlineData("not-an-email")>]
+[<InlineData("missing-domain@")>]
+[<InlineData("@missing-user.com")>]
+let ``invalid email yields Error`` (email: string) =
+    match validateMail email with
+    | Ok info ->
+        failwithf "Expected Error for %s but got %s" email info.MailAddress.Address
+    | Error msg -> Assert.Contains(email, msg)

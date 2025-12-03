@@ -54,11 +54,9 @@ let validateGeoJsonFeatureLocation (location: GeoJsonFeatureDto) : Result<GeoJso
     | ex -> Error $"No or missing location: {ex.Message}"
     
 let validateParentCamp (camps: DbCamp list) (parentId: int) : Result<DbCamp, string> =
-    try
-    Ok (camps |> List.find (fun el ->  el.Id = parentId))
-    
-    with
-    | ex -> Error $"No parent Camp found."
+    match camps |> List.tryFind (fun el -> el.Id = parentId) with
+    | Some camp -> Ok camp
+    | None -> Error "No parent Camp found."
     
 let validateDateString (date: string) : Result<DateTimeOffset, string> =
     try
