@@ -12,12 +12,18 @@
   
 
     <ItemGroup>
+        <Compile Include="Service\GeoJsonService.fs" />
         <Compile Include="Model/Model.fs" />
+        <Compile Include="Service\ResultExt.fs" />
+        <Compile Include="Model\Errors.fs" />
+        <Compile Include="Model\Validation\ValidateDbData.fs" />
+        <Compile Include="Model\Validation\ValidateClientData.fs" />
+        <Compile Include="Model\Conversion\DBConversions.fs" />
+        <Compile Include="Model\Conversion\DTOConversion.fs" />
         <Compile Include="Database\Database.fs" />
-        <Compile Include="WeatherForecast.fs" />
-        <Compile Include="Controllers/WeatherForecastController.fs" />
-        <Compile Include="Controllers\Camp.fs" />
-        <Compile Include="Program.fs" />
+        <Compile Include="Model\UserService.fs" />
+        <Compile Include="Model\AuthService.fs" />
+        <Compile Include="Model\CampService.fs" />
     </ItemGroup>
 
     <ItemGroup>
@@ -25,10 +31,21 @@
         <Link>.dockerignore</Link>
       </Content>
       <Content Include="Dockerfile" />
+      <Compile Include="Controller\CampController.fs" />
+      <Compile Include="Controller\UserController.fs" />
+      <Compile Include="Program.fs" />
+      
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="FsToolkit.ErrorHandling" Version="5.1.0" />
+      <PackageReference Include="Giraffe" Version="8.1.0-alpha-001" />
+      <PackageReference Include="Giraffe.OpenApi" Version="0.0.2" />
+      <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.10" />
+      <PackageReference Include="NetTopologySuite" Version="2.6.0" />
+      <PackageReference Include="NetTopologySuite.IO.GeoJSON" Version="4.0.0" />
       <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.4" />
+      <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
     </ItemGroup>
 
     <ItemGroup>

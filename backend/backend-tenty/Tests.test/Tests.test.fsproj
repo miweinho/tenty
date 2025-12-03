@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <AssemblyName>backend_tenty.Tests</AssemblyName>
+        <TargetFramework>net9.0</TargetFramework>
+        <IsPackable>false</IsPackable>
+        <GenerateProgramFile>false</GenerateProgramFile>
+        <RootNamespace>Tests</RootNamespace>
+    </PropertyGroup>
+    
+    <ItemGroup>
+        <ProjectReference Include="..\backend-tenty\backend-tenty.fsproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="Model\Validation\ValidationDbData.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="coverlet.collector" Version="6.0.2"/>
+        <PackageReference Include="FsToolkit.ErrorHandling" Version="5.1.0" />
+        <PackageReference Include="Giraffe" Version="8.1.0-alpha-001" />
+        <PackageReference Include="Giraffe.OpenApi" Version="0.0.2" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0"/>
+        <PackageReference Include="NetTopologySuite" Version="2.6.0" />
+        <PackageReference Include="NetTopologySuite.IO.GeoJSON" Version="4.0.0" />
+        <PackageReference Include="xunit" Version="2.9.2"/>
+        <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2"/>
+        <PackageReference Include="FsCheck" Version="3.3.1" />
+        <PackageReference Include="FsCheck.Xunit" Version="3.3.1" />
+    </ItemGroup>
+
+</Project>
