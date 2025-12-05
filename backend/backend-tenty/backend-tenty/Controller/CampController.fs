@@ -57,7 +57,7 @@ type public CampController(logger: ILogger<CampController>) =
                     return ActionResult<FullCampDto>(campDto)
         }
         
-    [<HttpPost("camp")>]
+    [<HttpPost>]
     [<Authorize>]
     member this.PostCamp(newCampDto: CreateCampDto) : Task<ActionResult<FullCampDto>> =
         task {
