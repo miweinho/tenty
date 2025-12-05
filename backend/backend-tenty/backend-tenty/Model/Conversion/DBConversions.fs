@@ -1,5 +1,6 @@
 ﻿module backend_tenty.Model.Conversion.DBConversions
 
+open System
 open System.Drawing
 open System.Net.Mail
 open Npgsql.FSharp
@@ -95,8 +96,9 @@ let dbCampZoneToDomain (campZone: DbCampZone) : Result<CampZone, string> =
         match String50.create campZone.Name with
         | Some name -> Ok name
         | None -> Error "No name for Campzone found."
-        
-    let delimitation = deserializeFeatureFromJson campZone.Zone
+    let delimitation = campZone.Zone
+                        |> geometryFromJson
+                        |> geometryToFeature
         
         
     let! color =
@@ -141,12 +143,3 @@ let dbShownMapsToDomain (shownMaps: DbShownMap list) : Result<String50 list, str
     )
     |> sequenceResultsList
     
-let newCampToDb (newCamp: CreateCampDto) (ownerId: int) : Result<NewDbCampDto, string> =
-    let locationString = 
-    {
-        OwnerId = ownerId
-        CampName = newCamp.Name
-        Location = "asdf"
-        IsSubCamp = newCamp.IsSubCamp
-        ParentId = Some newCamp.ParentId
-    }

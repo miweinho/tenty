@@ -239,10 +239,7 @@ let getCampUserForCamp (campId: int) : Task<Result<DbCampUser list, string>> = t
                     CreatedAt = read.datetimeOffsetOrNone "created_at"
                     UpdatedAt = read.datetimeOffsetOrNone "updated_at"
                 })
-        return
-            match rows with
-            | [] -> Error $"No CampUser for camp with id {campId} found"
-            | _ -> Ok rows
+        return Ok rows
     with
     | ex -> return Error $"Database error: {ex.Message}"
 }
@@ -291,10 +288,7 @@ let getDetailListEntriesForCamp (camp_id: int): Task<Result<DbDetailListEntry li
                     UpdatedAt = read.datetimeOffsetOrNone "updated_at"
                  }
                 )
-        return
-            match rows with
-            | [] -> Error $"No Details List entry for Camp with id {camp_id} found"
-            | _ -> Ok rows
+        return Ok rows
     with
     | ex -> return Error $"Database error: {ex.Message}"
 }
@@ -344,10 +338,7 @@ let getShownMaps (camp_id: int): Task<Result<DbShownMap list, string>> = task {
                     UpdatedAt = read.datetimeOffsetOrNone "updated_at"
                  }
                 )
-        return
-            match rows with
-            | [] -> Error $"No ShownMaps List entry for Camp with id {camp_id} found"
-            | _ -> Ok rows
+        return Ok rows
     with
     | ex -> return Error $"Database error: {ex.Message}"
 }
@@ -375,7 +366,7 @@ let addNewDbCamp (dto: NewDbCampDto) : Task<Result<int, string>> = task {
         let! ids =
             connectionString
             |> Sql.connect
-            |> Sql.query "INSERT INTO tenty.camps (owner, camp_name, loc, is_sub_camp, parent_id) VALUES (@owner, @camp_name, ST_SetSRID(ST_GeomFromGeoJSON(@location), 4326), @is_sub_camp, @parent_id) RETURNING id"
+            |> Sql.query "INSERT INTO tenty.camps (owner, camp_name, loc, is_sub_camp, parent_id) VALUES (@owner, @camp_name, ST_SetSRID(ST_GeomFromText(@location), 4326), @is_sub_camp, @parent_id) RETURNING id"
             |> Sql.parameters [ "@owner", Sql.int dto.OwnerId; "@camp_name", Sql.string dto.CampName; "@location", Sql.text dto.Location; "@is_sub_camp", Sql.bool dto.IsSubCamp; "@parent_id", Sql.intOrNone dto.ParentId ]
             |> Sql.executeAsync (fun read -> read.int "id")
         return
@@ -392,7 +383,7 @@ let addNewDbCampZone (dto: NewDbCampZoneDto) : Task<Result<int, string>> = task 
         let! ids =
             connectionString
             |> Sql.connect
-            |> Sql.query "INSERT INTO tenty.camp_zones (camp_id, name, is_camp_delimitation, color, geom) VALUES (@camp_id, @name, @is_delimitation, @color, ST_SetSRID(ST_GeomFromGeoJSON(@zone), 4326)) RETURNING id"
+            |> Sql.query "INSERT INTO tenty.camp_zones (camp_id, name, is_camp_delimitation, color, geom) VALUES (@camp_id, @name, @is_delimitation, @color, ST_SetSRID(ST_GeomFromText(@zone), 4326)) RETURNING id"
             |> Sql.parameters [ "@camp_id", Sql.int dto.CampId
                                 "@name", Sql.string dto.Name
                                 "@is_delimitation", Sql.bool dto.IsCampDelimitation
@@ -412,7 +403,7 @@ let updateDbCampZone (dbZone: DbCampZone) : Task<Result<int, string>> = task {
         let! affected =
             connectionString
             |> Sql.connect
-            |> Sql.query "UPDATE tenty.camp_zones SET camp_id = @camp_id, name = @name, is_camp_delimitation = @is_delimitation, color = @color, geom = ST_SetSRID(ST_GeomFromGeoJSON(@zone), 4326), updated_at = NOW() WHERE id = @id"
+            |> Sql.query "UPDATE tenty.camp_zones SET camp_id = @camp_id, name = @name, is_camp_delimitation = @is_delimitation, color = @color, geom = ST_SetSRID(ST_GeomFromText(@zone), 4326), updated_at = NOW() WHERE id = @id"
             |> Sql.parameters [ "@camp_id", Sql.int dbZone.CampId; "@name", Sql.string dbZone.Name; "@is_delimitation", Sql.bool dbZone.IsCampDelimitation; "@color", Sql.string dbZone.Color; "@zone", Sql.text dbZone.Zone; "@id", Sql.int dbZone.Id ]
             |> Sql.executeNonQueryAsync
         return
@@ -501,16 +492,14 @@ let private insertCamp (conn: NpgsqlConnection) (camp: NewDbCampDto) = task {
         |> Sql.existingConnection
         |> Sql.query "
             INSERT INTO tenty.camps (
-                owner, camp_name, loc, is_sub_camp, parent_id, created_at, updated_at
+                owner, camp_name, loc, is_sub_camp, parent_id
             )
             VALUES (
                 @owner,
                 @camp_name,
-                ST_SetSRID(ST_GeomFromGeoJSON(@location), 4326),
+                ST_SetSRID(ST_GeomFromText(@location), 4326),
                 @is_sub_camp,
-                @parent_id,
-                NOW(),
-                NOW()
+                @parent_id
             )
             RETURNING id"
         |> Sql.parameters [
@@ -533,22 +522,20 @@ let private insertCampDetail (conn: NpgsqlConnection) (campId: int) (detail: New
         |> Sql.existingConnection
         |> Sql.query "
             INSERT INTO tenty.camp_details (
-                camp_id, start_date, end_date, description, city, created_at, updated_at
+                camp_id, start_date, end_date, description, city
             )
             VALUES (
                 @camp_id,
                 @start_date,
                 @end_date,
                 @description,
-                @city,
-                NOW(),
-                NOW()
+                @city
             )
             RETURNING id"
         |> Sql.parameters [
             "@camp_id",    Sql.int campId
-            "@start_date", Sql.timestamptz detail.StartDate
-            "@end_date",   Sql.timestamptz detail.EndDate
+            "@start_date", Sql.timestamp detail.StartDate.DateTime
+            "@end_date",   Sql.timestamp detail.EndDate.DateTime
             "@description",Sql.textOrNone detail.Description
             "@city",       Sql.stringOrNone detail.City
         ]
@@ -566,16 +553,14 @@ let private insertCampZones (conn: NpgsqlConnection) (campId: int) (zones: NewDb
             |> Sql.existingConnection
             |> Sql.query "
                 INSERT INTO tenty.camp_zones (
-                    camp_id, name, is_camp_delimitation, color, geom, created_at, updated_at
+                    camp_id, name, is_camp_delimitation, color, geom
                 )
                 VALUES (
                     @camp_id,
                     @name,
                     @is_delimitation,
                     @color,
-                    ST_SetSRID(ST_GeomFromGeoJSON(@zone), 4326),
-                    NOW(),
-                    NOW()
+                    ST_SetSRID(ST_GeomFromText(@zone), 4326)
                 )"
             |> Sql.parameters [
                 "@camp_id",        Sql.int campId
@@ -598,7 +583,7 @@ let private insertShownMaps (conn: NpgsqlConnection) (campId: int) (maps: NewDbS
             |> Sql.existingConnection
             |> Sql.query "
                 INSERT INTO tenty.shown_maps (
-                    camp_id, map_name, created_at, updated_at
+                    camp_id, map_name
                 )
                 VALUES (
                     @camp_id,

@@ -13,11 +13,10 @@ let validateName(campName: string): Result<string, string> =
     | Some n -> Ok campName
 
 // Länge 5.51 - 10.776
-// Breite: 45.58 - 47.802    
+// Breite: 45.58 - 47.802
 let private posInSwitzerland (p: Position) : bool =
     p.lon > 5.51 && p.lon < 10.76 && p.lat > 45.58 && p.lat < 47.80
-    
-    
+
 let private geometryInSwitzerland (geometry: Geometry ) =
     let rec checkRing (coords: Position list) =
         match coords with
@@ -25,7 +24,7 @@ let private geometryInSwitzerland (geometry: Geometry ) =
         | c :: cs ->
             if posInSwitzerland c then checkRing cs
             else Error $"Point is outside of Switzerland: {c.lat}, {c.lon}"
-    
+
     let rec checkRings (rings: Position list list) =
         match rings with
         | [] -> Ok ()
@@ -33,7 +32,7 @@ let private geometryInSwitzerland (geometry: Geometry ) =
             match checkRing ring with
             | Ok () -> checkRings rest
             | Error e -> Error e
-    
+
     match geometry with
     | Point p ->
         if posInSwitzerland p then Ok geometry
@@ -42,11 +41,11 @@ let private geometryInSwitzerland (geometry: Geometry ) =
         match checkRings p with
         | Ok () -> Ok geometry
         | Error e -> Error e
-
-        
+   
 let validateGeoJsonFeatureLocation (location: GeoJsonFeatureDto) : Result<GeoJsonFeatureDto, string> =
     try
         let locFeature = featureFromDto location
+        System.Console.WriteLine("did featureFromDto before fail.")
         match geometryInSwitzerland locFeature.geometry with
         | Ok g -> Ok location
         | Error e -> Error e

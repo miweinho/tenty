@@ -61,5 +61,19 @@ type public CampController(logger: ILogger<CampController>) =
     [<Authorize>]
     member this.PostCamp(newCampDto: CreateCampDto) : Task<ActionResult<FullCampDto>> =
         task {
-            match checkClaimForPermission
+            let userId = parseUserIdFromToken this.HttpContext
+            match userId with
+            | Error err ->
+                logger.LogError("Error while checking for valid userId in claim: {err}", err)
+                return ActionResult<FullCampDto>(this.Problem(detail = "Internal error while loading camp."))
+            | Ok userId ->
+                let! newCamp = createCamp newCampDto userId
+                match newCamp with
+                | Error e ->
+                    logger.LogError("Error while creating camp: {Error}", e)
+                    return ActionResult<FullCampDto>(this.BadRequest($"Error while creating camp."))
+                | Ok c ->
+                    let campDto = domainCampToDto c
+                    return ActionResult<FullCampDto>(campDto)
+            
         }

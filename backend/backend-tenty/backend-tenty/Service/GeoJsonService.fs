@@ -2,6 +2,7 @@
 
 open System
 open System.Collections.Generic
+open System.Globalization
 open System.Text.Json
 open System.Text.Json.Serialization
 open Giraffe
@@ -37,7 +38,7 @@ type GeoJsonFeatureCollection = {
 }
 
 // -------------------------
-// DTOs (shape of GeoJSON)
+// DTOs (client-facing GeoJSON)
 // -------------------------
 
 type GeoJsonGeometryDto = {
@@ -67,7 +68,9 @@ type GeoJsonFeatureCollectionDto = {
     features   : GeoJsonFeatureDto array
 }
 
-// Optional: serializer options
+// -------------------------
+// JSON options
+// -------------------------
 let private jsonOptions =
     let o = JsonSerializerOptions()
     o.PropertyNamingPolicy <- JsonNamingPolicy.CamelCase
@@ -75,7 +78,34 @@ let private jsonOptions =
     o
 
 // -------------------------
-// Domain -> DTO
+// Helpers
+// -------------------------
+let private invariant = CultureInfo.InvariantCulture
+
+let private parseDouble (s: string) =
+    Double.Parse(s, invariant)
+
+let private formatDouble (v: float) =
+    v.ToString("0.########", invariant)
+
+let private ensureLinearRing (ring: Position list) =
+    match ring with
+    | r when r.Length < 4 ->
+        failwithf "Invalid polygon ring: expected at least 4 positions, got %d" r.Length
+    | r ->
+        // GeoJSON spec: first and last coordinate of a ring MUST be the same.
+        let first = r.Head
+        let last  = r.[r.Length - 1]
+        if first <> last then
+            failwith "Invalid polygon ring: first and last position must be identical"
+        r
+
+
+let private emptyProperties =
+    { name = None; coordType = None; extra = Map.empty }
+
+// -------------------------
+// Domain -> GeoJSON DTO
 // -------------------------
 
 let private geometryToDto (g: Geometry) : GeoJsonGeometryDto =
@@ -86,7 +116,7 @@ let private geometryToDto (g: Geometry) : GeoJsonGeometryDto =
           coordinates = coords }
 
     | Polygon rings ->
-        // [[ [lon,lat]; ... ]; ...]
+        // [[[lon,lat]; ...]; ...]
         let coords =
             rings
             |> List.map (fun ring ->
@@ -110,12 +140,14 @@ let private propsToJsonElement (p: FeatureProps) : JsonElement =
     | Some ct -> dict.Add("coordType", JsonSerializer.SerializeToElement(ct, jsonOptions))
     | None -> ()
 
+    // Do NOT let extra overwrite known properties
     for KeyValue(k, v) in p.extra do
-        dict.[k] <- v
+        if not (dict.ContainsKey k) then
+            dict.Add(k, v)
 
     JsonSerializer.SerializeToElement(dict, jsonOptions)
 
-let private featureToDto (f: GeoJsonFeature) : GeoJsonFeatureDto =
+let featureToDto (f: GeoJsonFeature) : GeoJsonFeatureDto =
     { ``type``   = "Feature"
       geometry   = geometryToDto f.geometry
       properties = propsToJsonElement f.properties }
@@ -125,14 +157,15 @@ let private collectionToDto (fc: GeoJsonFeatureCollection) : GeoJsonFeatureColle
       features = fc.features |> List.map featureToDto |> List.toArray }
 
 // -------------------------
-// DTO -> Domain
+// GeoJSON DTO -> Domain
 // -------------------------
 
 let private geometryFromDto (g: GeoJsonGeometryDto) : Geometry =
-    System.Console.WriteLine($"geometryFromDto type: {g}")
-
     match g.``type`` with
     | "Point" ->
+        if g.coordinates.ValueKind <> JsonValueKind.Array then
+            failwith "Invalid Point: coordinates must be an array [lon, lat]"
+
         let arr = g.coordinates.EnumerateArray() |> Seq.toArray
         if arr.Length <> 2 then
             failwithf "Invalid Point coordinates: expected [lon, lat], got %d elements" arr.Length
@@ -142,18 +175,25 @@ let private geometryFromDto (g: GeoJsonGeometryDto) : Geometry =
         Point { lon = lon; lat = lat }
 
     | "Polygon" ->
-        // [ [ [lon,lat], ... ], ... ]
+        if g.coordinates.ValueKind <> JsonValueKind.Array then
+            failwith "Invalid Polygon: coordinates must be an array of linear rings"
+
         let rings =
             g.coordinates.EnumerateArray()
-            |> Seq.map (fun ring ->
-                ring.EnumerateArray()
+            |> Seq.map (fun ringJson ->
+                if ringJson.ValueKind <> JsonValueKind.Array then
+                    failwith "Invalid Polygon: each ring must be an array"
+                ringJson.EnumerateArray()
                 |> Seq.map (fun coord ->
+                    if coord.ValueKind <> JsonValueKind.Array then
+                        failwith "Invalid Polygon: each coordinate must be an array [lon, lat]"
                     let a = coord.EnumerateArray() |> Seq.toArray
                     if a.Length <> 2 then
                         failwithf "Invalid polygon coordinate: expected [lon, lat], got %d elements" a.Length
                     { lon = a.[0].GetDouble()
                       lat = a.[1].GetDouble() })
-                |> Seq.toList)
+                |> Seq.toList
+                |> ensureLinearRing)
             |> Seq.toList
 
         Polygon rings
@@ -166,98 +206,222 @@ let private propsFromJsonElement (propsJson: JsonElement) : FeatureProps =
     let mutable coordType : string option = None
     let mutable extra : Map<string, JsonElement> = Map.empty
 
-    for p in propsJson.EnumerateObject() do
-        match p.Name with
-        | "name" ->
-            if p.Value.ValueKind <> JsonValueKind.Null then
-                name <- Some (p.Value.GetString())
-        | "coordType" ->
-            if p.Value.ValueKind <> JsonValueKind.Null then
-                coordType <- Some (p.Value.GetString())
-        | "crs" -> //Ignore CRS-Field
-            ()
-        | other ->
-            extra <- extra.Add(other, p.Value.Clone())
+    if propsJson.ValueKind <> JsonValueKind.Object then
+        // Allow null/undefined → empty properties
+        if propsJson.ValueKind <> JsonValueKind.Null && propsJson.ValueKind <> JsonValueKind.Undefined then
+            failwith "GeoJSON properties must be an object"
+    else
+        for p in propsJson.EnumerateObject() do
+            match p.Name with
+            | "name" ->
+                if p.Value.ValueKind = JsonValueKind.String then
+                    name <- Some (p.Value.GetString())
+            | "coordType" ->
+                if p.Value.ValueKind = JsonValueKind.String then
+                    coordType <- Some (p.Value.GetString())
+            | "crs" -> // Ignore CRS field if it shows up in properties
+                ()
+            | other ->
+                extra <- extra.Add(other, p.Value.Clone())
 
     { name      = name
       coordType = coordType
       extra     = extra }
-    
-let private geometryToFeature (g: Geometry) : GeoJsonFeature =
+
+let geometryToFeature (g: Geometry) : GeoJsonFeature =
     {
-        geometry = g
-        properties = {name = None; coordType = None; extra = Map.empty}
+        geometry   = g
+        properties = { name = None; coordType = None; extra = Map.empty }
     }
 
 let featureFromDto (f: GeoJsonFeatureDto) : GeoJsonFeature =
-    { geometry   = geometryFromDto f.geometry
-      properties = propsFromJsonElement f.properties }
+    try
+        { geometry   = geometryFromDto f.geometry
+          properties = propsFromJsonElement f.properties }
+    with ex ->            
+        failwithf "featureFromDto failed: %s" ex.Message
 
 let private featureCollectionFromDto (fc: GeoJsonFeatureCollectionDto) : GeoJsonFeatureCollection =
-    { features = fc.features |> Array.toList |> List.map featureFromDto }
-
-let private removeCrsFromJson (json: string) : string =
-    // Entfernt: ,"crs":{...} oder "crs":{...},
-    System.Text.RegularExpressions.Regex.Replace(
-        json,
-        @"""crs""\s*:\s*\{(?:[^{}]|(?:\{[^}]*\}))*\}\s*,?",
-        ""
-    ).Replace(",,", ",").Replace(",}", "}")
+    try
+        let features =
+            fc.features
+            |> Array.mapi (fun i dto ->
+                try featureFromDto dto
+                with ex ->
+                    let dtoJson =
+                        try JsonSerializer.Serialize(dto, jsonOptions)
+                        with _ -> "<failed to serialize feature dto>"
+                    failwithf "featureCollectionFromDto: failure at feature index %d: %s | DTO: %s" i ex.Message dtoJson
+            )
+            |> Array.toList
+        { features = features }
+    with ex ->
+        let fcJson =
+            try JsonSerializer.Serialize(fc, jsonOptions)
+            with _ -> "<failed to serialize feature collection dto>"
+        failwithf "featureCollectionFromDto failed: %s | Collection DTO: %s" ex.Message fcJson
 
 // -------------------------
-// Public API you probably want
+// WKT (DB) <-> Geometry
+// -------------------------
+//
+// DB DTO: string like "POINT(2600000 1200000)" or "POLYGON((...))"
+// Optional EWKT prefix "SRID=2056;..." is accepted on input.
+
+let private stripSridPrefix (wkt: string) =
+    let s = wkt.Trim()
+    if s.StartsWith("SRID=", StringComparison.OrdinalIgnoreCase) then
+        let idx = s.IndexOf(';')
+        if idx > 0 then s.Substring(idx + 1).Trim() else s
+    else
+        s
+
+let private betweenParens (s: string) =
+    let openIdx = s.IndexOf('(')
+    let closeIdx = s.LastIndexOf(')')
+    if openIdx < 0 || closeIdx <= openIdx then
+        failwithf "Invalid WKT: %s" s
+    s.Substring(openIdx + 1, closeIdx - openIdx - 1).Trim()
+
+let geometryFromWkt (wkt: string) : Geometry =
+    let s = stripSridPrefix wkt
+
+    if s.StartsWith("POINT", StringComparison.OrdinalIgnoreCase) then
+        let content = betweenParens s
+        let parts =
+            content.Split([| ' '; '\t' |], StringSplitOptions.RemoveEmptyEntries)
+        if parts.Length <> 2 then
+            failwithf "Invalid POINT WKT: %s" wkt
+        let x = parseDouble parts.[0]
+        let y = parseDouble parts.[1]
+        Point { lon = x; lat = y }
+
+    elif s.StartsWith("POLYGON", StringComparison.OrdinalIgnoreCase) then
+        let content = betweenParens s
+        // content is like "(x y, x y),(x y, x y)" or "x y, x y"
+        let contentTrim = content.Trim()
+
+        let inner =
+            if contentTrim.StartsWith("(") && contentTrim.EndsWith(")") then
+                contentTrim.Substring(1, contentTrim.Length - 2)
+            else
+                contentTrim
+
+        let ringsText = inner.Split([| ")(" |], StringSplitOptions.None)
+
+        let rings =
+            ringsText
+            |> Array.map (fun ringText ->
+                ringText.Split([| ',' |], StringSplitOptions.RemoveEmptyEntries)
+                |> Array.map (fun coordText ->
+                    let parts =
+                        coordText.Trim().Split(
+                            [| ' '; '\t' |],
+                            StringSplitOptions.RemoveEmptyEntries
+                        )
+                    if parts.Length <> 2 then
+                        failwithf "Invalid POLYGON coordinate in WKT: '%s'" coordText
+                    { lon = parseDouble parts.[0]
+                      lat = parseDouble parts.[1] })
+                |> Array.toList
+                |> ensureLinearRing)
+            |> Array.toList
+
+        Polygon rings
+
+    else
+        failwithf "Unsupported or invalid WKT geometry: %s" wkt
+
+let geometryToWkt (g: Geometry) : string =
+    match g with
+    | Point p ->
+        // Example: "POINT(2600000 1200000)"
+        $"POINT({formatDouble p.lon} {formatDouble p.lat})"
+
+    | Polygon rings ->
+        // POLYGON((x1 y1, x2 y2,...),(...hole...))
+        let ringsText =
+            rings
+            |> List.map (fun ring ->
+                ring
+                |> List.map (fun p -> $"{formatDouble p.lon} {formatDouble p.lat}")
+                |> String.concat ", "
+                |> fun coords -> $"({coords})")
+            |> String.concat ","
+
+        $"POLYGON({ringsText})"
+
+// Helper for DB if you want to go via Feature
+
+let featureToWkt (f: GeoJsonFeature) : string =
+    geometryToWkt f.geometry
+
+let featureCollectionToWkts (fc: GeoJsonFeatureCollection) : string list =
+    fc.features |> List.map featureToWkt
+
+// -------------------------
+// Public API - Client (GeoJSON)
 // -------------------------
 
-/// 1. Parse GeoJSON from client -> domain model
-let deserializeFeatureCollection (json: string) : GeoJsonFeatureCollection =
-    let cleanJson = removeCrsFromJson json
+/// Parse GeoJSON FeatureCollection JSON from client → domain model
+let deserializeFeatureCollectionFromJson (json: string) : GeoJsonFeatureCollection =
     let dto =
-        JsonSerializer.Deserialize<GeoJsonFeatureCollectionDto>(cleanJson, jsonOptions)
+        JsonSerializer.Deserialize<GeoJsonFeatureCollectionDto>(json, jsonOptions)
         |> Option.ofObj
         |> Option.defaultWith (fun () -> failwith "Invalid GeoJSON: cannot deserialize FeatureCollection")
     featureCollectionFromDto dto
-    
-let deserializeFeature (json: string) :GeoJsonFeature =
-    let cleanJson = removeCrsFromJson json
+
+/// Parse GeoJSON Feature JSON from client → domain model
+let deserializeFeatureFromJson (json: string) : GeoJsonFeature =
     let dto =
-        JsonSerializer.Deserialize<GeoJsonFeatureDto>(cleanJson, jsonOptions)
+        JsonSerializer.Deserialize<GeoJsonFeatureDto>(json, jsonOptions)
         |> Option.ofObj
         |> Option.defaultWith (fun () -> failwith "Invalid GeoJSON: cannot deserialize Feature")
+    Console.WriteLine(dto)
     featureFromDto dto
-    
 
-    
-
-/// 2. Serialize domain -> GeoJSON string (for DB or client)
-let serializeFeatureCollection (fc: GeoJsonFeatureCollection) : string =
+/// Serialize domain FeatureCollection → GeoJSON string
+let serializeFeatureCollectionToJson (fc: GeoJsonFeatureCollection) : string =
     let dto = collectionToDto fc
     JsonSerializer.Serialize(dto, jsonOptions)
-   
-let serializeFeature (f: GeoJsonFeature) : GeoJsonFeatureDto =
-    featureToDto f
 
-/// 3. Helper: single geometry <-> JSON (if you need it)
+/// Serialize domain Feature → GeoJSON string
+let serializeFeatureToJson (f: GeoJsonFeature) : string =
+    let dto = featureToDto f
+    JsonSerializer.Serialize(dto, jsonOptions)
+
+/// Helper: single geometry JSON (GeoJSON Geometry object) → domain
 let geometryFromJson (json: string) : Geometry =
-    let cleanJson = removeCrsFromJson json
     let dto =
-        JsonSerializer.Deserialize<GeoJsonGeometryDto>(cleanJson, jsonOptions)
+        JsonSerializer.Deserialize<GeoJsonGeometryDto>(json, jsonOptions)
         |> Option.ofObj
         |> Option.defaultWith (fun () -> failwith "Invalid GeoJSON geometry")
     geometryFromDto dto
 
+/// Helper: domain geometry → GeoJSON Geometry JSON string
 let geometryToJson (g: Geometry) : string =
     let dto = geometryToDto g
     JsonSerializer.Serialize(dto, jsonOptions)
-    
 
+// -------------------------
+// Public API - DB (WKT)
+// -------------------------
 
-//Used public functions to deserialize features from db and fronend:
+/// Parse WKT geometry from DB (e.g. 'POINT(2600000 1200000)') → domain Geometry
+let deserializeGeometryFromWkt (wkt: string) : Geometry =
+    geometryFromWkt wkt
 
-let deserializeFeatureFromJson (json: string) : GeoJsonFeature =
-    json
-    |> geometryFromJson
-    |> geometryToFeature
+/// Serialize domain Geometry → WKT string for DB
+///
+/// Example usage with PostGIS:
+///   ST_GeomFromText(@wkt, 2056)
+let serializeGeometryToWkt (g: Geometry) : string =
+    geometryToWkt g
+
+/// Serialize a GeoJsonFeature to WKT string for DB
+let featureToDbWkt (feature: GeoJsonFeature) : string =
+    serializeGeometryToWkt feature.geometry
     
-    
-let dtoToJson (dto: GeoJsonFeatureDto) : string =
-    JsonSerializer.Serialize(dto, jsonOptions)
+let featureDtoToDbWkt (feature: GeoJsonFeatureDto) : string =
+    featureFromDto feature
+    |> featureToDbWkt

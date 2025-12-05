@@ -41,7 +41,7 @@ CREATE TABLE camps (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     owner INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     camp_name VARCHAR(50) NOT NULL,
-    loc geometry(Point,2056) NOT NULL,
+    loc geometry(Point,4326) NOT NULL,
     is_sub_camp BOOLEAN NOT NULL DEFAULT FALSE,
     parent_id INTEGER NULL REFERENCES camps(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -87,7 +87,7 @@ CREATE TABLE camp_zones (
     name VARCHAR(50) NOT NULL,
     is_camp_delimitation BOOLEAN NOT NULL DEFAULT FALSE,
     color VARCHAR(20),
-    geom geometry(Polygon, 2056),
+    geom geometry(Polygon, 4326),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_camp_zone_name UNIQUE (camp_id, name),
@@ -107,7 +107,7 @@ CREATE TABLE features (
     camp_id INTEGER NOT NULL REFERENCES camps(id) ON DELETE CASCADE,
     kind feature_kind NOT NULL,
     name VARCHAR(50),
-    geom geometry(Geometry, 2056) NOT NULL,
+    geom geometry(Geometry, 4326) NOT NULL,
     heading_deg DOUBLE PRECISION CHECK (heading_deg >= 0 AND heading_deg < 360),
     props JSONB,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -154,15 +154,15 @@ INSERT INTO users (first_name, middle_name, last_name, email) VALUES
 
 -- Users sind bereits eingefügt weiter oben; IDs: 1..5 (Anna..Laura)
 
--- Camps: zuerst das Hauptlager, dann Nebencamp, dann weiteres Camp
+-- Camps: Hauptlager zuerst, dann Nebencamp & Bergcamp (manuell in WGS84)
 INSERT INTO camps (owner, camp_name, loc, is_sub_camp, parent_id)
 VALUES
-  (1, 'Hauptlager', ST_GeomFromText('POINT(2600000 1200000)',2056), FALSE, NULL);
+  (1, 'Hauptlager', ST_GeomFromText('POINT(7.438637222 46.951081111)',4326), FALSE, NULL);
 
 INSERT INTO camps (owner, camp_name, loc, is_sub_camp, parent_id)
 VALUES
-  (2, 'Nebenlager Nord', ST_GeomFromText('POINT(2600100 1200050)',2056), TRUE, (SELECT id FROM camps WHERE camp_name='Hauptlager')),
-  (3, 'Bergcamp', ST_GeomFromText('POINT(2600500 1200200)',2056), FALSE, NULL);
+  (2, 'Nebenlager Nord', ST_GeomFromText('POINT(7.439950828 46.951530871)',4326), TRUE, (SELECT id FROM camps WHERE camp_name='Hauptlager')),
+  (3, 'Bergcamp', ST_GeomFromText('POINT(7.445205253 46.953990000)',4326), FALSE, NULL);
 
 -- Camp users
 INSERT INTO camp_users (user_id, camp_id, user_permission)
@@ -184,12 +184,21 @@ VALUES
   ((SELECT id FROM camp_details WHERE camp_id = (SELECT id FROM camps WHERE camp_name='Hauptlager') LIMIT 1), 'Ablauf', 'Begrüßung, Lagerfeuer, Spiele'),
   ((SELECT id FROM camp_details WHERE camp_id = (SELECT id FROM camps WHERE camp_name='Nebenlager Nord') LIMIT 1), 'Regeln', 'Nachtruhe ab 23 Uhr');
 
--- Camp zones (gültige Polygone)
+-- Camp zones (Polygon-Koordinaten manuell in WGS84, Reihenfolge: lon lat)
 INSERT INTO camp_zones (camp_id, name, is_camp_delimitation, color, geom)
 VALUES
-  ((SELECT id FROM camps WHERE camp_name='Hauptlager'), 'Zeltwiese A', TRUE, '#A3D39C', ST_GeomFromText('POLYGON((2600000 1200000,2600050 1200000,2600050 1200050,2600000 1200050,2600000 1200000))',2056)),
-  ((SELECT id FROM camps WHERE camp_name='Bergcamp'), 'Lagergrenze', TRUE, '#FF0000', ST_GeomFromText('POLYGON((2600000 1200000,2600200 1200000,2600200 1200200,2600000 1200200,2600000 1200000))',2056)),
-  ((SELECT id FROM camps WHERE camp_name='Nebenlager Nord'), 'Zeltplatz Nord', TRUE, '#CCCCFF', ST_GeomFromText('POLYGON((2600100 1200050,2600150 1200050,2600150 1200100,2600100 1200100,2600100 1200050))',2056));
+  ((SELECT id FROM camps WHERE camp_name='Hauptlager'),
+   'Zeltwiese A', TRUE, '#A3D39C',
+   ST_GeomFromText('POLYGON((7.438637222 46.951081111, 7.439294025 46.951081111, 7.439294025 46.951530871, 7.438637222 46.951530871, 7.438637222 46.951081111))',4326)
+  ),
+  ((SELECT id FROM camps WHERE camp_name='Bergcamp'),
+   'Lagergrenze', TRUE, '#FF0000',
+   ST_GeomFromText('POLYGON((7.438637222 46.951081111, 7.441264434 46.951081111, 7.441264434 46.953435, 7.438637222 46.953435, 7.438637222 46.951081111))',4326)
+  ),
+  ((SELECT id FROM camps WHERE camp_name='Nebenlager Nord'),
+   'Zeltplatz Nord', TRUE, '#CCCCFF',
+   ST_GeomFromText('POLYGON((7.439950828 46.951530871, 7.440607631 46.951530871, 7.440607631 46.951979631, 7.439950828 46.951979631, 7.439950828 46.951530871))',4326)
+  );
 
 -- Shown maps
 INSERT INTO shown_maps (camp_id, map_name)

@@ -1,5 +1,6 @@
 ﻿module backend_tenty.Model.CampService
 
+open System
 open System.Drawing
 open System.Threading.Tasks
 open backend_tenty.Model.Conversion.DBConversions
@@ -64,7 +65,9 @@ let loadAndBuildCamp(campId: int) : Task<Result<Camp, CampLoadError>> =
                      |> List.map (dbCampUserToDomain >> Result.mapError CampLoadError.DbError)
                      |> sequenceResultsList
                      |> Task.FromResult
-    let location = deserializeFeatureFromJson dbCamp.Location
+    let location = dbCamp.Location
+                   |> geometryFromJson
+                   |> geometryToFeature      
     
     return {
         Id = dbCamp.Id
@@ -85,6 +88,7 @@ let private createNewDbCampDto (campDto: CreateCampDto) (ownerId: int) : Task<Re
     taskResult {
         let! campName = validateName campDto.Name
         let! location = validateGeoJsonFeatureLocation campDto.Location
+        let stringLocation = featureDtoToDbWkt location
         
         let! parentId =
             if campDto.IsSubCamp then
@@ -98,9 +102,10 @@ let private createNewDbCampDto (campDto: CreateCampDto) (ownerId: int) : Task<Re
     return {
         OwnerId = ownerId
         CampName = campName
-        Location = dtoToJson location
+        Location = stringLocation
         IsSubCamp = campDto.IsSubCamp
-        ParentId = parentId
+        //TODO: fix parent id when subcamps are enabled.
+        ParentId = None
     }
     }
 
@@ -110,8 +115,8 @@ let private createNewDbCampZoneDto (campZone: CampZoneDto) : Result<NewDbCampZon
         let! zone = validateGeoJsonFeatureLocation campZone.Zone
         let color = ColorTranslator.FromHtml campZone.Color
         let dbColor = ColorTranslator.ToHtml color
-        let dbZone = dtoToJson zone
-        
+        let dbZone = featureDtoToDbWkt zone
+
         return {
             CampId = 0 //Set to zerot to show invalid campId will be set in db transaction.
             Name = zoneName
@@ -185,7 +190,6 @@ let private validateNewCamp (campDto: CreateCampDto) (ownerId: int) : Task<Resul
             |> sequenceResultsList
             |> mapError CampLoadError.DetailsMissing
             |> Task.FromResult
-        
         return {
             CampDto = dbCampDto
             CampZones = zonesDtoList
@@ -198,9 +202,11 @@ let private validateNewCamp (campDto: CreateCampDto) (ownerId: int) : Task<Resul
     
 let createCamp (campDto: CreateCampDto) (ownerId: int) : Task<Result<Camp, CampLoadError>> =
     taskResult {
-        
          let! newDbCampDto = validateNewCamp campDto ownerId
-         
+         let! newCampId = addNewCamp newDbCampDto |> mapTaskError CampLoadError.DbError
+         let! savedCamp = loadAndBuildCamp newCampId
+        return savedCamp
     }
-
+//problem im moment:
+// uq_camp
 

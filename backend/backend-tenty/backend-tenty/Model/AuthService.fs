@@ -74,9 +74,9 @@ let generateClaims (permissions: CampPermissionSummary list) : CampRoles =
     |> List.fold (fun acc p ->
         let campIdInt = userPermissionToInt p.Permission
         match p.Permission with
-        | Admin -> { acc with Admin = campIdInt :: acc.Admin }
-        | Write -> { acc with Write = campIdInt :: acc.Write }
-        | Read  -> { acc with Read  = campIdInt :: acc.Read }
+        | Admin -> { acc with Admin = p.Id :: acc.Admin }
+        | Write -> { acc with Write = p.Id :: acc.Write }
+        | Read  -> { acc with Read  = p.Id :: acc.Read }
     ) empty
     
 let generateTokenForUser (tokenCfg: TokenConfig) (user: User) : Task<Result<TokenPair, string>> =

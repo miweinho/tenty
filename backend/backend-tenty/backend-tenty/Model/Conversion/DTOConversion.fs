@@ -50,7 +50,7 @@ let campZoneToDto (campZone: CampZone) : CampZoneDto =
         Name = String50.value campZone.Name
         IsCampDelimitation = campZone.IsDelimitation
         Color = ColorTranslator.ToHtml(campZone.Color)
-        Zone = serializeFeature campZone.Delimitation
+        Zone = featureToDto campZone.Delimitation
     }
     
 let detailListEntryToDto (detailEntry: DetailListEntry) : DetailListEntryDto =
@@ -76,7 +76,7 @@ let campDetailToDto (campDetail: CampDetail) : CampDetailDto =
     
 let domainCampToDto (camp: Camp) : FullCampDto =
     let ownerDto = domainUserToDTO camp.Owner
-    let location = serializeFeature camp.Location
+    let location = featureToDto camp.Location
     let campUserDto = List.map (fun el -> campUserToDto el ) camp.UserList
     let campDetailDto = campDetailToDto camp.CampDetail
     let shownMapsDto = List.map (fun el -> String50.value el) camp.ShownMaps
