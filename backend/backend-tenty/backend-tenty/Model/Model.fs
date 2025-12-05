@@ -38,29 +38,6 @@ module String50 =
         
     
     let toOpString (String50 s) = Some s
-type SwissCoordinate = private SwissCoordinate of decimal * decimal
-
-module SwissCoordinate =
-    let create (x: decimal) (y: decimal) =
-        let isValidSwissCoordinate (xCoord: decimal) (yCoord: decimal) =
-            // Swiss CH1903+ / LV95 coordinate ranges
-            let xMin = 2480000m
-            let xMax = 2840000m
-            let yMin = 1070000m
-            let yMax = 1300000m
-            
-            xCoord >= xMin && xCoord <= xMax && 
-            yCoord >= yMin && yCoord <= yMax
-
-        if isValidSwissCoordinate x y then
-            Some (SwissCoordinate (x, y))
-        else
-            None
-        // Zugriffs-Funktionen
-    let x (SwissCoordinate (xCoord, _)) = xCoord
-    let y (SwissCoordinate (_, yCoord)) = yCoord
-    let value (SwissCoordinate (xCoord, yCoord)) = (xCoord, yCoord)
-
 
 type NameInformation = {
     FirstName : String50
@@ -144,7 +121,7 @@ type PatchCampDto = {
     Id: int    
     owner: User option
     Name: String50 option
-    Location: SwissCoordinate option
+    Location: Geometry option
     UserList: CampUser List option
     Delimitation: CampZone option
     CampDetail: CampDetail option
