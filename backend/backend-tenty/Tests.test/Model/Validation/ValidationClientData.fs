@@ -14,6 +14,22 @@ let private pointFeature lon lat =
       geometry = { ``type`` = "Point"; coordinates = coords }
       properties = props }
 
+let private polygonFeature (points: (float * float) list) =
+    let ring =
+        points
+        |> List.map (fun (lon, lat) -> [| lon; lat |])
+        |> List.toArray
+
+    let coords =
+        [| ring |]
+        |> JsonSerializer.SerializeToElement
+
+    let props = JsonSerializer.SerializeToElement(Map.empty<string, string>)
+
+    { ``type`` = "Feature"
+      geometry = { ``type`` = "Polygon"; coordinates = coords }
+      properties = props }
+
 [<Fact>]
 let ``validateName accepts strings within 50 chars`` () =
     let name = String.replicate 10 "camp"
@@ -37,12 +53,62 @@ let ``validateGeoJsonFeatureLocation accepts swiss point`` () =
     | Error msg -> failwithf "Expected Ok but got Error: %s" msg
 
 [<Fact>]
+let ``validateGeoJsonFeatureLocation accepts swiss polygon`` () =
+    let polygon =
+        polygonFeature
+            [ (8.4, 46.8)
+              (8.5, 46.9)
+              (8.6, 46.8)
+              (8.4, 46.8) ]
+
+    match validateGeoJsonFeatureLocation polygon with
+    | Ok _ -> ()
+    | Error msg -> failwithf "Expected Ok but got Error: %s" msg
+
+[<Fact>]
 let ``validateGeoJsonFeatureLocation rejects point outside switzerland`` () =
     let outside = pointFeature 12.0 52.0
 
     match validateGeoJsonFeatureLocation outside with
     | Ok _ -> failwith "Expected Error for point outside Switzerland"
     | Error msg -> Assert.Contains("outside of Switzerland", msg)
+
+[<Fact>]
+let ``validateGeoJsonFeatureLocation rejects polygon with outside vertex`` () =
+    let polygon =
+        polygonFeature
+            [ (8.4, 46.8)
+              (11.0, 46.9)
+              (8.6, 46.8)
+              (8.4, 46.8) ]
+
+    match validateGeoJsonFeatureLocation polygon with
+    | Ok _ -> failwith "Expected Error for polygon outside Switzerland"
+    | Error msg -> Assert.Contains("outside of Switzerland", msg)
+
+[<Fact>]
+let ``validateGeoJsonFeatureLocation rejects swapped coordinate order`` () =
+    let swapped = pointFeature 46.8 8.5
+
+    match validateGeoJsonFeatureLocation swapped with
+    | Ok _ -> failwith "Expected Error for swapped lon/lat order"
+    | Error msg -> Assert.Contains("outside of Switzerland", msg)
+
+[<Fact>]
+let ``validateGeoJsonFeatureLocation reports malformed coordinates`` () =
+    let malformedCoords = JsonSerializer.SerializeToElement([| 8.5; 46.8; 1.0 |])
+    let props = JsonSerializer.SerializeToElement(Map.empty<string, string>)
+
+    let malformedPoint =
+        { ``type`` = "Feature"
+          geometry =
+            { ``type`` = "Point"
+              coordinates = malformedCoords }
+          properties = props }
+
+    match validateGeoJsonFeatureLocation malformedPoint with
+    | Ok _ -> failwith "Expected Error for malformed coordinate array"
+    | Error msg -> Assert.Contains("Invalid Point coordinates", msg)
 
 [<Fact>]
 let ``validateParentCamp finds matching id`` () =
