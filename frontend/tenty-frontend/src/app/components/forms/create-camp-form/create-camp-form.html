@@ -1,0 +1,120 @@
+<mat-card>
+  <mat-card-header>
+    <mat-card-title>Create Camp</mat-card-title>
+  </mat-card-header>
+
+  <mat-card-content>
+    <mat-horizontal-stepper linear #stepper>
+      <!-- STEP 1: Location picker -->
+      <mat-step [stepControl]="campForm.get('location')">
+        <ng-template matStepLabel>Location</ng-template>
+
+        <div class="step-content">
+          <p>Pick the camp location.</p>
+          <div class="placeholder">
+            <p>Location picker placeholder</p>
+            <button mat-raised-button color="primary" (click)="startLocationPicker()">Pick sample location</button>
+          </div>
+
+          <div class="location-preview" *ngIf="campForm.get('location')?.value as loc">
+            <pre>{{ loc | json }}</pre>
+          </div>
+        </div>
+
+        <div class="step-actions">
+          <button mat-button matStepperNext>Next</button>
+        </div>
+      </mat-step>
+
+      <!-- STEP 2: Delimitation editor -->
+      <mat-step [stepControl]="campForm.get('delimitation')">
+        <ng-template matStepLabel>Delimitation</ng-template>
+
+        <div class="step-content">
+          <p>Create camp delimitation.</p>
+          <div class="placeholder">
+            <p>Delimitation editor placeholder</p>
+            <button mat-raised-button color="primary" (click)="startDelimitationEditor()">Set sample delimitation</button>
+          </div>
+
+          <div class="delimitation-preview" *ngIf="campForm.get('delimitation')?.value as d">
+            <pre>{{ d | json }}</pre>
+          </div>
+        </div>
+
+        <div class="step-actions">
+          <button mat-button matStepperPrevious>Back</button>
+          <button mat-button matStepperNext>Next</button>
+        </div>
+      </mat-step>
+
+      <!-- STEP 3: Other details -->
+      <mat-step [stepControl]="campForm.get('name')">
+        <ng-template matStepLabel>Details</ng-template>
+
+        <!-- note: bind the full form group here -->
+        <form class="details-form" [formGroup]="campForm">
+          <mat-form-field appearance="fill">
+            <mat-label>Camp name</mat-label>
+            <input matInput formControlName="name" required />
+          </mat-form-field>
+
+          <!-- nested group: use formGroupName -->
+          <div formGroupName="campDetail">
+            <mat-form-field appearance="fill">
+              <mat-label>City</mat-label>
+              <input matInput formControlName="city" />
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+              <mat-label>Start Date</mat-label>
+              <input matInput formControlName="startDate" placeholder="YYYY-MM-DD" />
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+              <mat-label>End Date</mat-label>
+              <input matInput formControlName="endDate" placeholder="YYYY-MM-DD" />
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+              <mat-label>Description</mat-label>
+              <textarea matInput formControlName="description"></textarea>
+            </mat-form-field>
+          </div>
+
+          <mat-checkbox formControlName="isSubCamp">Is sub camp</mat-checkbox>
+
+          <div class="subcamp-list">
+            <h4>Sub Camps (IDs)</h4>
+            <div *ngFor="let ctrl of subCamp.controls; let i = index" class="subcamp-row">
+              <input [formControl]="ctrl" placeholder="sub camp id" />
+              <button mat-icon-button color="warn" (click)="removeSubCamp(i)"><mat-icon>delete</mat-icon></button>
+            </div>
+            <button mat-button (click)="addSubCampId()">Add SubCamp ID</button>
+          </div>
+
+          <div class="detail-list">
+            <h4>Detail list</h4>
+            <div *ngFor="let item of detailList.controls; let i = index" [formGroup]="item" class="detail-row">
+              <mat-form-field appearance="fill">
+                <mat-label>Title</mat-label>
+                <input matInput formControlName="title" />
+              </mat-form-field>
+              <mat-form-field appearance="fill">
+                <mat-label>Content</mat-label>
+                <input matInput formControlName="content" />
+              </mat-form-field>
+              <button mat-icon-button color="warn" (click)="removeDetail(i)"><mat-icon>delete</mat-icon></button>
+            </div>
+            <button mat-button (click)="addDetail()">Add detail</button>
+          </div>
+        </form>
+
+        <div class="step-actions">
+          <button mat-button matStepperPrevious>Back</button>
+          <button mat-raised-button color="primary" (click)="submit()">Create Camp</button>
+        </div>
+      </mat-step>
+    </mat-horizontal-stepper>
+  </mat-card-content>
+</mat-card>

@@ -44,6 +44,17 @@ export interface CampDetailDto {
   detailList?: DetailListEntryDto[] | null;
 }
 
+export interface CampDto {
+    id: number;
+    ownerId: number;
+    campName: string;
+    location: GeoJsonFeatureDto;
+    isSubCamp: boolean;
+    parentId: number | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
 export interface FullCampDto {
   id: number;
   owner: UserDto;
