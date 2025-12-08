@@ -1,4 +1,4 @@
-import { Component, OnInit, Output, EventEmitter, inject } from '@angular/core';
+import { Component, AfterViewInit, Output, EventEmitter, inject, ViewChild, ElementRef } from '@angular/core';
 import 'ol/ol.css';
 import Map from 'ol/Map';
 import View from 'ol/View';
@@ -13,18 +13,19 @@ import { CoordinateService } from '../../../service/coordinateService/coordinate
   templateUrl: './map.html',
   styleUrls: ['./map.css'],
 })
-export class MapComponent implements OnInit {
+export class MapComponent implements AfterViewInit {
   public map!: Map;
   private coordinateService = inject(CoordinateService);
 
   @Output() mapReady = new EventEmitter<Map>();
+  @ViewChild('mapContainer', { static: false }) mapContainer!: ElementRef<HTMLDivElement>;
 
 
-  ngOnInit(): void {
+  ngAfterViewInit(): void {
     const [webMercatorX, webMercatorY] = this.coordinateService.gpsToWebMercator(8.898, 47.5558);
 
     this.map = new Map({
-      target: 'map',
+      target: this.mapContainer.nativeElement,
       layers: [
         new TileLayer({
           source: new XYZ({
@@ -35,10 +36,24 @@ export class MapComponent implements OnInit {
       view: new View({
         projection: "EPSG:3857",
         center: [webMercatorX, webMercatorY],
-        zoom: 18
+        zoom: 12,
+        minZoom: 8,
+        maxZoom: 18,
       }),
     });
+    console.log("ol map createt in ngAfterViewInit.")
     this.mapReady.emit(this.map);
+  }
+
+    // public API: force OL to recalculate size when container becomes visible
+  public updateSize(): void {
+    try {
+      if (this.map && typeof (this.map as any).updateSize === 'function') {
+        (this.map as any).updateSize();
+      }
+    } catch (e) {
+      console.warn('updateSize failed', e);
+    }
   }
 
   getMap(): Map {

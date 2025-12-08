@@ -20,15 +20,16 @@ import { CoordinateService } from '../../../service/coordinateService/coordinate
   styleUrls: ['./mapview.css'],
 })
 export class MapView {
-  @ViewChild(MapComponent) mapComponent!: MapComponent;
+  @ViewChild(MapComponent, {static: true}) mapComponent!: MapComponent;
   drawingService = inject(DrawingService);
   coordinateService = inject(CoordinateService);
   campService = inject(CampService);
 
   onMapReady(map: Map): void {
+    console.log("mapready from mapview?");
     this.drawingService.initializeMap(map);
     // load existing camps from backend and draw them
-    this.loadCamps();
+    //this.loadCamps();
   }
 
   startDrawing(type: DrawType): void {

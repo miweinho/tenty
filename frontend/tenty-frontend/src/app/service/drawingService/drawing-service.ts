@@ -3,8 +3,10 @@ import { BehaviorSubject } from 'rxjs';
 import { Draw, Modify, Select, Snap } from 'ol/interaction';
 import { Vector as VectorLayer } from 'ol/layer';
 import { Vector as VectorSource } from 'ol/source';
-import { Feature, Map } from 'ol';
-import { Point, LineString, Polygon } from 'ol/geom';
+import Map from 'ol/Map';
+import Feature from 'ol/Feature';
+import Geometry from 'ol/geom/Geometry';
+import { Point } from 'ol/geom';
 import { Style, Fill, Stroke, Circle } from 'ol/style';
 
 export type DrawType = 'Point' | 'LineString' | 'Polygon' | 'Circle';
@@ -13,28 +15,42 @@ export type DrawType = 'Point' | 'LineString' | 'Polygon' | 'Circle';
   providedIn: 'root'
 })
 export class DrawingService {
-  private map?: Map;
-  private vectorSource = new VectorSource();
+  private map: Map | null = null;
+
+  private vectorSource = new VectorSource<Feature<Geometry>>();
   private vectorLayer = new VectorLayer({
     source: this.vectorSource,
     style: this.getDefaultStyle()
   });
 
-  private drawInteraction?: Draw;
-  private modifyInteraction?: Modify;
-  private selectInteraction?: Select;
+  private drawInteraction: Draw | null = null;
+  private modifyInteraction: Modify | null = null;
+  private selectInteraction: Select | null = null;
+  private snapInteraction: Snap | null = null;
 
   // Observable für Features
-  private featuresSubject = new BehaviorSubject<Feature[]>([]);
-  public features$ = this.featuresSubject.asObservable();
+  private featuresSubject = new BehaviorSubject<Feature<Geometry>[]>([]);
+  public readonly features$ = this.featuresSubject.asObservable();
 
   constructor() {
     // Listen to feature changes
     this.vectorSource.on('addfeature', () => this.updateFeatures());
     this.vectorSource.on('removefeature', () => this.updateFeatures());
+    this.vectorSource.on('changefeature', () => this.updateFeatures());
+    this.vectorSource.on('clear', () => this.updateFeatures());
   }
 
+  /**
+   * Initialisiert den Service mit einer Map-Instanz und fügt die Vector-Layer hinzu.
+   * Kann mehrfach aufgerufen werden (z.B. bei neuem MapComponent), alte Map wird dann „vergessen“.
+   */
   initializeMap(map: Map): void {
+    // Falls die Layer bereits auf einer anderen Map hängt, dort entfernen
+    if (this.map && this.map !== map) {
+      this.map.removeLayer(this.vectorLayer);
+      this.removeInteractions(this.map);
+    }
+
     this.map = map;
     this.map.addLayer(this.vectorLayer);
     this.setupInteractions();
@@ -43,16 +59,44 @@ export class DrawingService {
   private setupInteractions(): void {
     if (!this.map) return;
 
+    // Modify
     this.modifyInteraction = new Modify({ source: this.vectorSource });
-    this.selectInteraction = new Select();
-
     this.map.addInteraction(this.modifyInteraction);
+
+    // Select
+    this.selectInteraction = new Select();
     this.map.addInteraction(this.selectInteraction);
+
+    // Snap
+    this.snapInteraction = new Snap({ source: this.vectorSource });
+    this.map.addInteraction(this.snapInteraction);
   }
+
+  private removeInteractions(map: Map): void {
+    if (this.modifyInteraction) {
+      map.removeInteraction(this.modifyInteraction);
+      this.modifyInteraction = null;
+    }
+    if (this.selectInteraction) {
+      map.removeInteraction(this.selectInteraction);
+      this.selectInteraction = null;
+    }
+    if (this.snapInteraction) {
+      map.removeInteraction(this.snapInteraction);
+      this.snapInteraction = null;
+    }
+    if (this.drawInteraction) {
+      map.removeInteraction(this.drawInteraction);
+      this.drawInteraction = null;
+    }
+  }
+
+  // ---------------------------------------------------
+  // Zeichnen
+  // ---------------------------------------------------
 
   startDrawing(type: DrawType): void {
     this.stopDrawing();
-    
     if (!this.map) return;
 
     this.drawInteraction = new Draw({
@@ -61,67 +105,141 @@ export class DrawingService {
     });
 
     this.map.addInteraction(this.drawInteraction);
-
-    // Add snap interaction
-    const snapInteraction = new Snap({ source: this.vectorSource });
-    this.map.addInteraction(snapInteraction);
   }
 
   stopDrawing(): void {
     if (this.drawInteraction && this.map) {
       this.map.removeInteraction(this.drawInteraction);
-      this.drawInteraction = undefined;
+      this.drawInteraction = null;
     }
   }
+
+  /**
+   * Convenience: starte einen Draw-Mode für genau ein Feature.
+   * Resolve mit dem erzeugten Feature bei drawend, stoppt dann automatisch das Zeichnen.
+   */
+  drawOnce(type: DrawType): Promise<Feature<Geometry> | null> {
+    return new Promise(resolve => {
+      if (!this.map) {
+        resolve(null);
+        return;
+      }
+
+      this.stopDrawing();
+
+      const draw = new Draw({
+        source: this.vectorSource,
+        type: type
+      });
+
+      const onDrawEnd = (evt: any) => {
+        const feature = evt.feature as Feature<Geometry>;
+        // Aufräumen
+        draw.un('drawend', onDrawEnd);
+        if (this.map) {
+          this.map.removeInteraction(draw);
+        }
+        this.drawInteraction = null;
+        resolve(feature);
+      };
+
+      draw.on('drawend', onDrawEnd);
+
+      this.map.addInteraction(draw);
+      this.drawInteraction = draw;
+    });
+  }
+
+  // ---------------------------------------------------
+  // Select / Modify Steuerung
+  // ---------------------------------------------------
+
+  enableModify(enabled: boolean): void {
+    if (!this.map || !this.modifyInteraction) return;
+    if (enabled) {
+      this.map.addInteraction(this.modifyInteraction);
+    } else {
+      this.map.removeInteraction(this.modifyInteraction);
+    }
+  }
+
+  enableSelect(enabled: boolean): void {
+    if (!this.map || !this.selectInteraction) return;
+    if (enabled) {
+      this.map.addInteraction(this.selectInteraction);
+    } else {
+      this.map.removeInteraction(this.selectInteraction);
+    }
+  }
+
+  getSelectedFeatures(): Feature<Geometry>[] {
+    if (!this.selectInteraction) return [];
+    const collection = this.selectInteraction.getFeatures();
+    return collection.getArray();
+  }
+
+  clearSelection(): void {
+    if (!this.selectInteraction) return;
+    this.selectInteraction.getFeatures().clear();
+  }
+
+  // ---------------------------------------------------
+  // Feature-Management
+  // ---------------------------------------------------
 
   clearAll(): void {
     this.vectorSource.clear();
   }
 
   removeSelected(): void {
-    if (this.selectInteraction) {
-      const features = this.selectInteraction.getFeatures();
-      features.forEach(feature => {
-        this.vectorSource.removeFeature(feature);
-      });
-      features.clear();
-    }
+    const selected = this.getSelectedFeatures();
+    selected.forEach(f => this.vectorSource.removeFeature(f));
+    this.clearSelection();
   }
 
-  getAllFeatures(): Feature[] {
+  getAllFeatures(): Feature<Geometry>[] {
     return this.vectorSource.getFeatures();
   }
 
-  addFeature(feature: Feature): void {
+  addFeature(feature: Feature<Geometry>): void {
     this.vectorSource.addFeature(feature);
   }
 
-  private updateFeatures(): void {
-    this.featuresSubject.next(this.getAllFeatures());
+  removeFeature(feature: Feature<Geometry>): void {
+    this.vectorSource.removeFeature(feature);
   }
 
   /**
-   * Wait for a single map click, create a point Feature at that click and add it to the vector source.
-   * Resolves with the created Feature or null if map is not initialized.
+   * Bestehende API beibehalten:
+   * bei Klick wird ein Punkt-Feature erstellt und hinzugefügt.
    */
-  waitForClickAndCreatePoint(): Promise<Feature | null> {
+  waitForClickAndCreatePoint(): Promise<Feature<Point> | null> {
     return new Promise(resolve => {
-      if (!this.map) { resolve(null); return; }
+      if (!this.map) {
+        resolve(null);
+        return;
+      }
+
       this.map.once('singleclick', (evt: any) => {
         const coord = evt.coordinate;
-        const feature = new Feature(new Point(coord));
+        const feature = new Feature<Point>(new Point(coord));
         this.vectorSource.addFeature(feature);
         resolve(feature);
       });
     });
   }
 
-  /**
-   * Remove a feature from the vector source (useful when user cancels or backend save fails).
-   */
-  removeFeature(feature: Feature): void {
-    this.vectorSource.removeFeature(feature);
+  // ---------------------------------------------------
+  // Observable-Update
+  // ---------------------------------------------------
+
+  private updateFeatures(): void {
+    this.featuresSubject.next(this.getAllFeatures());
   }
+
+  // ---------------------------------------------------
+  // Default-Style
+  // ---------------------------------------------------
 
   private getDefaultStyle(): Style {
     return new Style({

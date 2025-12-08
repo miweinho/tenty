@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { CampDto } from '../models';
 
 export interface Location {
   x: number;
@@ -26,5 +27,9 @@ export class CampService {
   // Fetch all camps
   getAll(): Observable<Camp[]> {
     return this.http.get<Camp[]>('/api/camp');
+  }
+
+  getCampsForUser(): Observable<CampDto[]> {
+    return this.http.get<CampDto[]>('/api/camp/list');
   }
 }
