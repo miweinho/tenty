@@ -6,7 +6,7 @@ import { OSM, XYZ } from 'ol/source';
 import TileLayer from 'ol/layer/Tile';
 import {register} from 'ol/proj/proj4'
 import proj4 from 'proj4'
-import { CoordinateService } from '../../service/coordinateService/coordinateService';
+import { CoordinateService } from '../../../service/coordinateService/coordinateService';
 
 @Component({
   selector: 'app-map',

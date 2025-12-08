@@ -1,0 +1,25 @@
+<mat-card class="login-card" appearance="outlined">
+    <mat-card-header>
+        <mat-card-title>
+            Login:
+        </mat-card-title>
+    </mat-card-header>
+    <div class="login-form">
+  <mat-form-field>
+    <mat-label>Enter your email</mat-label>
+    <input
+      matInput
+      placeholder="pat@example.com"
+      [formControl]="email"
+      (blur)="updateErrorMessage()"
+      required
+    />
+    @if (email.invalid) {
+      <mat-error>{{errorMessage()}}</mat-error>
+    }
+  </mat-form-field>
+</div>
+<mat-card-actions class="login-actions">
+    <button mat-raised-button color="primary" type="submit" (click)="onSubmit()" [disabled]="email.invalid">Submit</button>
+</mat-card-actions>
+</mat-card>

@@ -1,0 +1,14 @@
+<mat-toolbar>
+  <button matIconButton class="example-icon" aria-label="Drawer button that toggels the side navigation.">
+    <mat-icon>menu</mat-icon>
+  </button>
+  <span>tenty</span>
+  <span class="toolbar-spacer"></span>
+  <button matIconButton class="example-icon" aria-label="Logout button to exit application as user." (click)="handleLogout()">
+    <mat-icon>logout</mat-icon>
+  </button>
+</mat-toolbar>
+
+<div class="page-content">
+    <router-outlet></router-outlet>
+</div>

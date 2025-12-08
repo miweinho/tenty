@@ -1,17 +1,17 @@
 import { Component, OnInit, inject, ViewChild } from '@angular/core';
-import { DrawingService, DrawType } from '../../service/drawingService/drawing-service';
+import { DrawingService, DrawType } from '../../../service/drawingService/drawing-service';
 import Map from 'ol/Map';
 import { MapComponent } from '../map/map';
-import { Feature } from 'ol';
+import Feature from 'ol/Feature';
 import Point from 'ol/geom/Point';
 import Circle from 'ol/style/Circle';
 import { toLonLat } from 'ol/proj';
-import { CampService, Camp } from '../../service/camp';
+import { CampService, Camp } from '../../../service/camp';
 import Style from 'ol/style/Style';
 import Text from 'ol/style/Text';
 import Fill from 'ol/style/Fill';
 import Stroke from 'ol/style/Stroke';
-import { CoordinateService } from '../../service/coordinateService/coordinateService';
+import { CoordinateService } from '../../../service/coordinateService/coordinateService';
 
 @Component({
   selector: 'app-mapview',

@@ -134,7 +134,7 @@ export interface NewDbFullCampDto {
 
 // Auth / Token DTOs
 export interface LoginDTO {
-  mailAddress: string;
+  mailAddress: string | null;
 }
 
 export interface TokenDTO {

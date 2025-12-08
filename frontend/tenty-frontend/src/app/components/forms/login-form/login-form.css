@@ -1,0 +1,30 @@
+:host {
+  display: block;
+}
+mat-card.login-card {
+  display: flex;
+  align-items: center;       /* vertikal zentrieren */
+  justify-content: center;   /* horizontal zentrieren */
+  padding: 24px;
+  min-height: 220px;
+  box-sizing: border-box;
+}
+
+form.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 420px;
+  align-items: stretch;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+.login-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
