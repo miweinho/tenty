@@ -11,6 +11,7 @@ open backend_tenty.Model.CampService
 open backend_tenty.Model.Conversion.DTOConversion
 open backend_tenty.Model.Types
 open System.Threading.Tasks
+open backend_tenty.Service.ResultExt
 
 [<ApiController>]
 [<Route("api/[controller]")>]
@@ -21,21 +22,28 @@ type public CampController(logger: ILogger<CampController>) =
     //TODO: Add viewport on map so only maps on view are showed.
     [<HttpGet("list")>]
     [<Authorize>]
-    member this.Get() : Task<ActionResult<DbCamp list>> =
+    member this.Get() : Task<ActionResult<CampDto list>> =
         task {
             let userId = parseUserIdFromToken this.HttpContext
             match userId with
             | Error err ->
                 logger.LogError("Error while checking for valid userId in claim: {err}", err)
-                return ActionResult<DbCamp list>(this.Problem(detail = "Internal error while loading camp."))
+                return ActionResult<CampDto list>(this.Problem(detail = "Internal error while loading camp."))
             | Ok userId ->
-                    let! camps = getAllCampsForUser userId
-                    match camps with
-                    | Ok camps ->
-                        return ActionResult<DbCamp list>(camps)
+                    let! dbCamps = getAllCampsForUser userId
+                    match dbCamps with
                     | Error err ->
                         logger.LogError("Error while loading camps for user {UserId}: {Error}", userId, err)
-                        return ActionResult<DbCamp list>(this.Problem(detail = "Internal error while loading camp."))               
+                        return ActionResult<CampDto list>(this.Problem(detail = "Internal error while loading camp."))
+                    | Ok dbCamps ->
+                        let converted = dbCamps |> List.map dbCampToDto |> sequenceResultsList
+                        match converted with
+                        | Ok camps ->
+                            return ActionResult<CampDto list>(camps)
+                        | Error e ->
+                            logger.LogError("Error while converting DbCamp -> CampDto: {Error}", e)
+                            return ActionResult<CampDto list>(this.Problem(detail = "Internal error while converting camp data"))
+                                   
         }
     
     [<HttpGet("{id}")>]

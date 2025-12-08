@@ -1,5 +1,6 @@
 ﻿module backend_tenty.Model.Conversion.DTOConversion
 
+open System
 open System.Drawing
 open backend_tenty.Model.Conversion.DBConversions
 open backend_tenty.Model.Types
@@ -96,6 +97,27 @@ let domainCampToDto (camp: Camp) : FullCampDto =
         CampZones = campZonesDto
         
     }
+    
+let dbCampToDto (db: DbCamp) : Result<CampDto, string> =
+    try
+        if String.IsNullOrWhiteSpace(db.Location) then
+            Error "DbCamp.Location is empty"
+        else
+            let geom = geometryFromJson db.Location
+            let feature = geometryToFeature geom
+            let locDto = featureToDto feature
+            Ok {
+                Id = db.Id
+                OwnerId = db.OwnerId
+                CampName = db.CampName
+                Location = locDto
+                IsSubCamp = db.IsSubCamp
+                ParentId = db.ParentId
+                CreatedAt = db.CreatedAt
+                UpdatedAt = db.UpdatedAt
+            }
+    with ex ->
+        Error ex.Message
     
     
     

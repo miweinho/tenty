@@ -45,7 +45,7 @@ module Program =
             builder.Services.AddControllers().AddJsonOptions(fun options ->
                 options.JsonSerializerOptions.NumberHandling <-
                     JsonNumberHandling.AllowNamedFloatingPointLiterals
-                options.JsonSerializerOptions.ReferenceHandler <- ReferenceHandler.Preserve
+                options.JsonSerializerOptions.ReferenceHandler <- ReferenceHandler.IgnoreCycles
                 options.JsonSerializerOptions.MaxDepth <- 128)
             builder.Services.AddSwaggerGen(fun c ->
                 c.SwaggerDoc("v1", OpenApiInfo(Title = "Tenty API", Version = "v1"))

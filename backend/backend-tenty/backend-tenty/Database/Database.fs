@@ -136,7 +136,7 @@ let getAllCampsForUser (id: int) : Task<Result<DbCamp list, string>> = task {
             |> Sql.executeAsync (fun read ->
                 {
                     Id = read.int "id"
-                    OwnerId = read.int "owner"
+                    DbCamp.OwnerId = read.int "owner"
                     CampName = read.string "camp_name"
                     Location = read.text "geojson"
                     IsSubCamp = read.bool "is_sub_camp"
@@ -161,7 +161,7 @@ let getCampById (campId: int) : Task<Result<DbCamp, string>> = task {
             |> Sql.parameters ["@id", Sql.int campId]
             |> Sql.executeAsync (fun read ->
                     {
-                    Id = read.int "id"
+                    DbCamp.Id = read.int "id"
                     OwnerId = read.int "owner"
                     CampName = read.string "camp_name"
                     Location = read.text "geojson"

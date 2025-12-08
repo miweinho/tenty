@@ -6,9 +6,6 @@ open System.Drawing
 open System.Net.Mail
 open backend_tenty.Service.GeoJsonService
 
-
-
-
 //Config Models:
 
 type TokenConfig = {
@@ -19,8 +16,6 @@ type TokenConfig = {
     RefreshTtl: TimeSpan
     PermVersion: int option
 }
-
-
 
 type String50 = private String50 of string
 
@@ -104,11 +99,6 @@ type CampPermissionSummary = {
     CampName: string
     OwnerId: int
     Permission: UserPermission
-}
-
-type SwissCoordinateDto = {
-    x: decimal
-    y: decimal
 }
 
 // DTO to create subcamp. Using only a name and delimitation inherits other values from parent camp.
@@ -241,6 +231,17 @@ type CampDetailDto = {
     Description: string option
     City: string
     DetailList: DetailListEntryDto list option
+}
+
+type CampDto = {
+    Id: int
+    OwnerId: int
+    CampName: string
+    Location: GeoJsonFeatureDto
+    IsSubCamp: bool
+    ParentId: int option
+    CreatedAt: DateTimeOffset option
+    UpdatedAt: DateTimeOffset option
 }
 
 type FullCampDto = {
