@@ -88,8 +88,21 @@ module Program =
                             )
                         )
                 |> ignore
+            
+            builder.Services.AddCors(fun opts ->
+                opts.AddPolicy("LocalDev", fun p ->
+                    p.WithOrigins("http://localhost:4200")
+                     .AllowAnyHeader()
+                     .AllowAnyMethod()
+                     .AllowCredentials()
+                    |> ignore)
+            )
+                
+
 
             let app = builder.Build()
+            
+            app.UseCors("LocalDev")
 
             app.UseSwagger()
             app.UseSwaggerUI()
