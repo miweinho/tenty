@@ -679,7 +679,7 @@ let updateDbDetailListEntry (entry: DbDetailListEntry) : Task<Result<int, string
         let! affected =
             connectionString
             |> Sql.connect
-            |> Sql.query "UPDATE tenty.detail_list_entries SET camp_details_id = @camp_details_id, title = @title, content = @content, updated_at = NOW() WHERE id = @id"
+            |> Sql.query "UPDATE tenty.detail_list_entries SET camp_details_id = @camp_details_id, title = @title, content = @content WHERE id = @id"
             |> Sql.parameters [ "@camp_details_id", Sql.int entry.CampDetailsId; "@title", Sql.string entry.Title; "@content", Sql.text entry.Content; "@id", Sql.int entry.Id ]
             |> Sql.executeNonQueryAsync
         return
@@ -825,8 +825,66 @@ let addNewFeatureDetail (dto: NewDbFeatureDetailDto) : Task<Result<int, string>>
     | ex -> return Error $"Database error: {ex.Message}"
 }
 
+let updateDbFeature (dto: DbFeature) : Task<Result<int, string>> = task {
+    try
+        let! affected =
+            connectionString
+            |> Sql.connect
+            |> Sql.query
+                "UPDATE tenty.features SET camp_id = @camp_id, kind = @kind, name = @name, geom = ST_SetSRID(ST_GeomFromText(@geometry), 4326), heading_deg = @heading_deg, length_m = @length_m, width_m = @width_m, color = @color, icon = @icon, props = @props WHERE id = @id"
+            |> Sql.parameters [
+                "@camp_id", Sql.int dto.CampId
+                "@kind", Sql.string dto.Kind
+                "@name", Sql.stringOrNone dto.Name
+                "@geometry", Sql.text dto.Geometry
+                "@heading_deg", Sql.doubleOrNone dto.HeadingDeg
+                "@length_m", Sql.doubleOrNone dto.LengthM
+                "@width_m", Sql.doubleOrNone dto.WidthM
+                "@color", Sql.stringOrNone dto.Color
+                "@icon", Sql.stringOrNone dto.Icon
+                "@props", Sql.textOrNone dto.Props
+                "@id", Sql.int dto.Id
+            ]
+            |> Sql.executeNonQueryAsync
 
+        return
+            match affected with
+            | 0 -> Error $"Feature with id {dto.Id} not found"
+            | n -> Ok n
+    with
+    | ex -> return Error $"Database error: {ex.Message}"
+}
 
+let deleteFeatureDetails (featureId: int) : Task<Result<int, string>> = task {
+    try
+        let! affected =
+            connectionString
+            |> Sql.connect
+            |> Sql.query "DELETE FROM tenty.feature_details WHERE feature_id = @feature_id"
+            |> Sql.parameters [ "@feature_id", Sql.int featureId ]
+            |> Sql.executeNonQueryAsync
+
+        return Ok affected
+    with
+    | ex -> return Error $"Database error: {ex.Message}"
+}
+
+let deleteFeatureById (featureId: int) : Task<Result<int, string>> = task {
+    try
+        let! affected =
+            connectionString
+            |> Sql.connect
+            |> Sql.query "DELETE FROM tenty.features WHERE id = @id"
+            |> Sql.parameters [ "@id", Sql.int featureId ]
+            |> Sql.executeNonQueryAsync
+
+        return
+            match affected with
+            | 0 -> Error $"Feature with id {featureId} not found"
+            | n -> Ok n
+    with
+    | ex -> return Error $"Database error: {ex.Message}"
+}
 // DB Functions used by UserController to modify RefreshTokens
 
 let getRefreshToken (token: RefreshTokenDTO) : Task<Result<DbRefreshToken, string>> = task {
