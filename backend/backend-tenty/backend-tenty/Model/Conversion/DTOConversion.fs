@@ -1,4 +1,5 @@
 ﻿// language: fsharp
+﻿/// Conversions between domain models and API DTOs.
 module backend_tenty.Model.Conversion.DTOConversion
 
 open System
@@ -13,6 +14,7 @@ open backend_tenty.Model.Validation.ValidateClientData
 open backend_tenty.Service.GeoJsonService
 open backend_tenty.Service.ResultExt
 
+/// Converts a domain ``User`` into an outbound DTO.
 let domainUserToDTO (user: User) : UserDto =
     {
         Id = user.Id
@@ -22,6 +24,7 @@ let domainUserToDTO (user: User) : UserDto =
         Email = mailAddressToString user.MailInformation.MailAddress
     }
 
+/// Validates and converts a user DTO into the domain model.
 let dtoUserToDomain (userDto: UserDto) : Result<User, string> =
     match
         ValidateDbData.validateName userDto.FirstName userDto.MiddleName userDto.LastName,
@@ -36,6 +39,7 @@ let dtoUserToDomain (userDto: UserDto) : Result<User, string> =
     | Error e, _ -> Error ("Name ungültig: " + e)
     | _, Error e -> Error ("E-Mail ungültig: " + e)
 
+/// Alternate domain-to-DTO mapping used for camp payloads.
 let domainUserToDto (user: User) : UserDto =
     {
         Id = user.Id
@@ -45,12 +49,14 @@ let domainUserToDto (user: User) : UserDto =
         Email = (user.MailInformation.MailAddress.ToString())
     }
 
+/// Maps a camp user aggregate into its DTO representation.
 let campUserToDto (campUser: CampUser) : CampUserDto =
     {
         User = domainUserToDTO campUser.User
         Permission = userPermissionToInt campUser.Permission
     }
 
+/// Converts a camp zone domain object into a DTO.
 let campZoneToDto (campZone: CampZone) : CampZoneDto =
     {
         Name = String50.value campZone.Name
@@ -59,12 +65,14 @@ let campZoneToDto (campZone: CampZone) : CampZoneDto =
         Zone = featureToDto campZone.Delimitation
     }
 
+/// Converts a detail list entry into a DTO.
 let detailListEntryToDto (detailEntry: DetailListEntry) : DetailListEntryDto =
     {
         Title = String50.value detailEntry.Title
         Content = detailEntry.Content
     }
 
+/// Converts camp details and embedded list entries into a DTO.
 let campDetailToDto (campDetail: CampDetail) : CampDetailDto =
     let detailListDto =
         match campDetail.DetailList with
@@ -80,6 +88,7 @@ let campDetailToDto (campDetail: CampDetail) : CampDetailDto =
 
 
 
+/// Aggregates the full camp domain object into a detailed DTO.
 let domainCampToDto (camp: Camp) : FullCampDto =
     let ownerDto = domainUserToDTO camp.Owner
     let location = featureToDto camp.Location
@@ -103,6 +112,7 @@ let domainCampToDto (camp: Camp) : FullCampDto =
 
     }
 
+/// Converts a camp database row into a lightweight DTO for listings.
 let dbCampToDto (db: DbCamp) : Result<CampDto, string> =
     try
         if String.IsNullOrWhiteSpace(db.Location) then
@@ -124,6 +134,7 @@ let dbCampToDto (db: DbCamp) : Result<CampDto, string> =
     with ex ->
         Error ex.Message
 
+/// Converts a feature detail into its DTO form.
 let featureDetailToDto (detail: FeatureDetail) : FeatureDetailDto =
     {
         Id = detail.Id
@@ -133,6 +144,7 @@ let featureDetailToDto (detail: FeatureDetail) : FeatureDetailDto =
         UpdatedAt = detail.UpdatedAt
     }
 
+/// Validates and converts a feature detail DTO into the domain model.
 let featureDetailDtoToDomain (featureId: int) (detail: FeatureDetailDto) : Result<FeatureDetail, string> =
     result {
         do! validateFeatureDetailDto detail |> Result.map ignore
@@ -152,6 +164,7 @@ let featureDetailDtoToDomain (featureId: int) (detail: FeatureDetailDto) : Resul
         }
     }
 
+/// Converts a domain feature into an outbound DTO.
 let featureToDto (feature: Feature) : FeatureDto =
     {
         Id = feature.Id
@@ -170,6 +183,7 @@ let featureToDto (feature: Feature) : FeatureDto =
         Details = feature.Details |> Option.map (List.map featureDetailToDto)
     }
 
+/// Validates and converts an incoming feature DTO into the domain model.
 let featureDtoToDomain (feature: FeatureDto) : Result<Feature, string> =
     result {
         do! validateFeatureKind feature.Kind |> Result.map ignore
@@ -246,6 +260,7 @@ let featureDtoToDomain (feature: FeatureDto) : Result<Feature, string> =
         })
         }
 
+/// Attempts to construct an optional ``String50`` value while tagging errors with the field name.
 let private tryCreateString50 (value: string option) (fieldName: string) : Result<String50 option, string> =
     match value with
     | Some v ->
@@ -254,6 +269,7 @@ let private tryCreateString50 (value: string option) (fieldName: string) : Resul
         | None -> Error $"{fieldName} is invalid"
     | None -> Ok None
 
+/// Converts an option to a result, emitting the supplied error message when missing.
 let private optionToResult errorMsg opt =
     match opt with
     | Some v -> Ok v

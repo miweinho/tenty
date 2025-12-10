@@ -1,4 +1,5 @@
-﻿module backend_tenty.Model.Conversion.DBConversions
+﻿/// Converters between database DTOs and domain models.
+module backend_tenty.Model.Conversion.DBConversions
 
 open System
 open System.Drawing
@@ -13,6 +14,7 @@ open System.Text.Json
 
         //Used to translate Permission stored as int into fsharp type. Since there are only entries for user
     //with permission, the default case is Read.
+/// Maps a stored integer permission into a database user permission DU.
 let validateDbCampUserPermission (permission: int) : DbUserPermission =
     match permission with
     | 2 -> DbUserPermission.Admin
@@ -20,6 +22,7 @@ let validateDbCampUserPermission (permission: int) : DbUserPermission =
     | _ -> DbUserPermission.Read
     
     //Append admin Permission for missing integer. Only case where this happens is when Checked user is owner.
+/// Maps an optional integer permission into a domain ``UserPermission``.
 let validateUserPermission (permission: int option) :UserPermission =
     match permission with
     | Some 2 -> UserPermission.Admin
@@ -27,12 +30,14 @@ let validateUserPermission (permission: int option) :UserPermission =
     | Some _ -> UserPermission.Read
     | None -> UserPermission.Admin
     
+/// Converts a domain permission into its persisted integer form.
 let userPermissionToInt (permission: UserPermission) : int =
     match permission with
     | UserPermission.Admin -> 2
     | UserPermission.Write -> 1
     | UserPermission.Read -> 0
     
+/// Converts a database permission record into a domain permission value.
 let dbUserPermissionToUserPermission (dbPermission: DbUserPermission): UserPermission =
     match dbPermission with
     | DbUserPermission.Admin -> UserPermission.Admin
@@ -42,6 +47,7 @@ let dbUserPermissionToUserPermission (dbPermission: DbUserPermission): UserPermi
 
 // Functions used to transfer DB Records to Domain records:
 
+/// Builds a domain ``User`` from persisted columns.
 let dbUserToDomain (db: DbUser) : Result<User, string> =
     match validateName db.FirstName db.MiddleName db.LastName with
     | Error e -> Error e
@@ -54,6 +60,7 @@ let dbUserToDomain (db: DbUser) : Result<User, string> =
                  MailInformation = mailInfo
                }
             
+/// Combines a ``DbCampUser`` row with its ``DbUser`` to a domain ``CampUser``.
 let dbCampUserToDomain (dbCampUser: DbCampUser, user: DbUser) : Result<CampUser, string> =
     match (dbCampUser.UserId, user.Id) with
     | (x, y) when x <> y -> Error "Cant create CampUser from different user inputs."
@@ -70,6 +77,7 @@ let dbCampUserToDomain (dbCampUser: DbCampUser, user: DbUser) : Result<CampUser,
     | (_, _) -> Error "Error while parsing CampUser: Missing Input"
     
 
+/// Converts a domain user into its database DTO form.
 let domainUserToDb (domain: User) : DbUser =
     {
         Id = domain.Id
@@ -81,6 +89,7 @@ let domainUserToDb (domain: User) : DbUser =
         UpdatedAt = None        
     }
 
+/// Parses an HTML color string into a ``Color`` value.
 let parseHtmlColor (color: string) : Result<Color, string> =
     if System.String.IsNullOrWhiteSpace color then
         Error "Color cant be empty."
@@ -91,6 +100,7 @@ let parseHtmlColor (color: string) : Result<Color, string> =
         | :? System.ArgumentException as ex -> Error $"Invalid color format: {ex.Message}"
         | ex -> Error $"Error parsing color: {ex.Message}"
     
+/// Converts a camp zone row into the domain camp zone representation.
 let dbCampZoneToDomain (campZone: DbCampZone) : Result<CampZone, string> =
     result {
     let! campZoneName =
@@ -114,6 +124,7 @@ let dbCampZoneToDomain (campZone: DbCampZone) : Result<CampZone, string> =
     }
     }
 
+/// Converts a persisted detail list entry into the domain model.
 let dbDetailListEntryToDomain (detailEntry: DbDetailListEntry) : Result<DetailListEntry, string> =
         match String50.create detailEntry.Title with
         | None -> Error "No title in Detail list entry: "
@@ -122,6 +133,7 @@ let dbDetailListEntryToDomain (detailEntry: DbDetailListEntry) : Result<DetailLi
                 Content = detailEntry.Content
             }
     
+/// Combines camp details and related list entries into a domain ``CampDetail``.
 let dbCampDetailsToDomain (campDetail: DbCampDetail) (detailListEntries: DbDetailListEntry list) : Result<CampDetail, string> =
     let detailList = List.map dbDetailListEntryToDomain detailListEntries |> sequenceResultsList
     match detailList with
@@ -135,6 +147,7 @@ let dbCampDetailsToDomain (campDetail: DbCampDetail) (detailListEntries: DbDetai
         DetailList = Some list
         }
             
+/// Converts shown map rows into validated ``String50`` values.
 let dbShownMapsToDomain (shownMaps: DbShownMap list) : Result<String50 list, string> =
     shownMaps
     |> List.map (fun mapName -> 
@@ -144,6 +157,7 @@ let dbShownMapsToDomain (shownMaps: DbShownMap list) : Result<String50 list, str
     )
     |> sequenceResultsList
     
+/// Serializes a feature kind DU into its string database representation.
 let featureKindToString (kind: FeatureKind) : string =
     match kind with
     | FeatureKind.Tent -> "tent"
@@ -153,6 +167,7 @@ let featureKindToString (kind: FeatureKind) : string =
     | FeatureKind.Gate -> "gate"
     | FeatureKind.Custom -> "custom"
 
+/// Parses a persisted feature kind string into the domain DU.
 let featureKindFromString (kind: string) : Result<FeatureKind, string> =
     match kind.ToLowerInvariant() with
     | "tent" -> Ok FeatureKind.Tent
@@ -196,6 +211,7 @@ let private parsePropsJson (props: string option) : Result<JsonElement option, s
             let doc = JsonDocument.Parse(p)
             Ok (Some (doc.RootElement.Clone()))
         with ex -> Error $"Invalid props json: {ex.Message}"
+/// Converts a database feature row into the domain ``Feature`` model.
 let dbFeatureToDomain (dbFeature: DbFeature) : Result<Feature, string> =
     result {
         let! kind = featureKindFromString dbFeature.Kind
@@ -226,6 +242,7 @@ let dbFeatureToDomain (dbFeature: DbFeature) : Result<Feature, string> =
         }
     }
 
+/// Converts a feature detail row into the domain representation.
 let dbFeatureDetailToDomain (dbDetail: DbFeatureDetail) : Result<FeatureDetail, string> =
     result {
         let! title =
@@ -243,6 +260,7 @@ let dbFeatureDetailToDomain (dbDetail: DbFeatureDetail) : Result<FeatureDetail, 
         }
     }
 
+/// Serializes a domain feature into a database DTO.
 let domainFeatureToDb (feature: Feature) : DbFeature =
     {
         Id = feature.Id
@@ -260,6 +278,7 @@ let domainFeatureToDb (feature: Feature) : DbFeature =
         UpdatedAt = feature.UpdatedAt
     }
 
+/// Serializes a domain feature detail into a database DTO.
 let domainFeatureDetailToDb (detail: FeatureDetail) : DbFeatureDetail =
     {
         Id = detail.Id
@@ -270,6 +289,7 @@ let domainFeatureDetailToDb (detail: FeatureDetail) : DbFeatureDetail =
         UpdatedAt = detail.UpdatedAt
     }
     
+/// Prepares an insert DTO for creating a new feature record.
 let domainFeatureToNewDb (feature: Feature) : NewDbFeatureDto =
     {
         CampId = feature.CampId
@@ -284,6 +304,7 @@ let domainFeatureToNewDb (feature: Feature) : NewDbFeatureDto =
         Props = feature.Props
     }
     
+/// Prepares an insert DTO for creating a new feature detail tied to a feature id.
 let featureDetailToNewDb (featureId: int) (detail: FeatureDetail) : NewDbFeatureDetailDto =
     {
         FeatureId = featureId

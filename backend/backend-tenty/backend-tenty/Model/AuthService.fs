@@ -1,4 +1,5 @@
-﻿module backend_tenty.Model.AuthService
+﻿/// Authentication helpers for issuing and validating JWTs and refresh tokens.
+module backend_tenty.Model.AuthService
 
 open System.Security.Cryptography
 open System.Text.Json

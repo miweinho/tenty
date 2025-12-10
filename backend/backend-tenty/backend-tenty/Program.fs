@@ -13,16 +13,16 @@ open Microsoft.OpenApi.Models
 open backend_tenty.Model.Types
 
 module Program =
+    /// Exit code returned when the application shuts down gracefully.
     let exitCode = 0
 
     [<EntryPoint>]
+    /// Configures dependency injection, authentication, and middleware before starting the web host.
     let main args =
         printfn "Starting Tenty Backend..."
         if Database.testConnection() then
             printfn "Database ready"
             let builder = WebApplication.CreateBuilder(args)
-            
-            //Read information about Jwt
             let cfg = builder.Configuration.GetSection("Jwt")
             let issuer     = cfg["Issuer"]
             let audience   = cfg["Audience"]
@@ -50,7 +50,6 @@ module Program =
             builder.Services.AddSwaggerGen(fun c ->
                 c.SwaggerDoc("v1", OpenApiInfo(Title = "Tenty API", Version = "v1"))
     
-    // JWT Bearer Authentifizierung hinzufügen
                 c.AddSecurityDefinition("Bearer", OpenApiSecurityScheme(
                     Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
                     Name = "Authorization",
@@ -69,9 +68,9 @@ module Program =
                         )
                     )] <- [||]
                     requirement
-            )
-    
-              
+                )
+
+
             )
 
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

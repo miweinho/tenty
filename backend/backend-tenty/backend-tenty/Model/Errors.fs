@@ -1,9 +1,10 @@
-﻿module backend_tenty.Model.Errors
+﻿/// Shared error types used across services and controllers.
+module backend_tenty.Model.Errors
 
 open System.Threading.Tasks
 open Giraffe
 
-// General App Errors 
+/// General application error cases surfaced by the API.
 type AppError =
     | DbError of string
     | NotFound of string
@@ -15,7 +16,7 @@ type AppError =
     | TokenGenerationError of string
     | Unknown of string
     
-//Errors for Camp operations:
+/// Error cases specific to camp operations.
 type CampLoadError =
     | CampNotFound of int
     | DbError of string
@@ -25,7 +26,7 @@ type CampLoadError =
     | MapsMissing of string
     | InvalidPropertyValue of string
     
-// Errors for Auth operations:
+/// Errors that can arise during authentication or token issuance.
 type AuthError =
     | RequestEmpty
     | RequestInvalid
@@ -33,6 +34,7 @@ type AuthError =
     | UserParseError of string
     | TokenGenerationError of string
     
+/// Errors for feature CRUD operations.
 type FeatureError =
     | FeatureNotFound of int
     | DbError of string
@@ -41,17 +43,19 @@ type FeatureError =
     | GeometryInvalid of string
 
 
-// sichere mapError (kompatibel mit allen F# Versionen)
+/// Safe ``Result`` error mapping that works across F# versions.
 let mapError f = function
     | Ok v -> Ok v
     | Error e -> Error (f e)
     
+/// Maps the error channel of a ``Task<Result<_,_>>``.
 let mapTaskError (f: 'a -> 'b) (taskResult: Task<Result<'T, 'a>>) : Task<Result<'T, 'b>> =
     task {
         let! result = taskResult
         return mapError f result
     }
 
+/// Converts camp-specific errors into general ``AppError`` values.
 let fromCampLoadError (e: CampLoadError) : AppError =
     match e with
     | CampNotFound id -> AppError.NotFound (sprintf "Camp %d not found" id)
@@ -62,6 +66,7 @@ let fromCampLoadError (e: CampLoadError) : AppError =
     | MapsMissing s -> AppError.Unknown s
     | CampLoadError.InvalidPropertyValue s -> AppError.Unknown s
 
+/// Converts authentication errors into ``AppError`` values.
 let fromAuthError (e: AuthError) : AppError =
     match e with
     | RequestEmpty -> AppError.RequestEmpty
@@ -70,6 +75,7 @@ let fromAuthError (e: AuthError) : AppError =
     | UserParseError s -> AppError.UserParseError s
     | TokenGenerationError s -> AppError.TokenGenerationError s
 
+/// Converts feature errors into ``AppError`` values.
 let fromFeatureError (e: FeatureError) : AppError =
     match e with
     | FeatureNotFound id -> AppError.NotFound (sprintf "Feature %d not found" id)
@@ -78,13 +84,15 @@ let fromFeatureError (e: FeatureError) : AppError =
     | InvalidPropertyValue s -> AppError.ValidationError s
     | GeometryInvalid s -> AppError.ValidationError s
 
-// Map From Error Types to General Error Type.
+/// Maps a camp result into the general ``AppError`` space.
 let mapCampResult (r: Result<'a, CampLoadError>) : Result<'a, AppError> =
     mapError fromCampLoadError r
 
+/// Maps an auth result into the general ``AppError`` space.
 let mapAuthResult (r: Result<'a, AuthError>) : Result<'a, AppError> =
     mapError fromAuthError r
-    
+
+/// Maps a feature result into the general ``AppError`` space.
 let mapFeatureResult (r: Result<'a, FeatureError>) : Result<'a, AppError> =
     mapError fromFeatureError r
 

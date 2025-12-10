@@ -1,4 +1,5 @@
-﻿module backend_tenty.Service.GeoJsonService
+﻿/// Helpers for converting between domain geometry, GeoJSON payloads, and WKT strings.
+module backend_tenty.Service.GeoJsonService
 
 open System
 open System.Collections.Generic
@@ -7,10 +8,7 @@ open System.Text.Json
 open System.Text.Json.Serialization
 open Giraffe
 
-// -------------------------
-// Domain types
-// -------------------------
-
+/// Represents a geographic coordinate with longitude/latitude precision.
 type Position = {
     lon: float
     lat: float
@@ -18,30 +16,31 @@ type Position = {
 
 
 
+/// Discriminated union for GeoJSON geometry shapes supported by the API.
 type Geometry =
     | Point of Position
     | LineString of Position list
     | Polygon of Position list list
 
+/// Optional feature metadata captured alongside geometry.
 type FeatureProps = {
     name      : string option
     coordType : string option
     extra     : Map<string, JsonElement>
 }
 
+/// Domain representation of a GeoJSON Feature.
 type GeoJsonFeature = {
     geometry   : Geometry
     properties : FeatureProps
 }
 
+/// Domain representation of a GeoJSON FeatureCollection.
 type GeoJsonFeatureCollection = {
     features : GeoJsonFeature list
 }
 
-// -------------------------
-// DTOs (client-facing GeoJSON)
-// -------------------------
-
+/// Client-facing GeoJSON geometry DTO used for serialization and deserialization.
 type GeoJsonGeometryDto = {
     [<JsonPropertyName("type")>]
     ``type``      : string
@@ -50,6 +49,7 @@ type GeoJsonGeometryDto = {
     coordinates   : JsonElement
 }
 
+/// Client-facing GeoJSON feature DTO used for payload parsing.
 type GeoJsonFeatureDto = {
     [<JsonPropertyName("type")>]
     ``type``      : string
@@ -61,6 +61,7 @@ type GeoJsonFeatureDto = {
     properties    : JsonElement
 }
 
+/// Client-facing GeoJSON feature collection DTO used for payload parsing.
 type GeoJsonFeatureCollectionDto = {
     [<JsonPropertyName("type")>]
     ``type``   : string
@@ -158,6 +159,7 @@ let private propsToJsonElement (p: FeatureProps) : JsonElement =
 
     JsonSerializer.SerializeToElement(dict, jsonOptions)
 
+/// Converts a domain ``GeoJsonFeature`` into its DTO representation for serialization.
 let featureToDto (f: GeoJsonFeature) : GeoJsonFeatureDto =
     { ``type``   = "Feature"
       geometry   = geometryToDto f.geometry
@@ -263,12 +265,14 @@ let private propsFromJsonElement (propsJson: JsonElement) : FeatureProps =
       coordType = coordType
       extra     = extra }
 
+/// Wraps a geometry in a ``GeoJsonFeature`` with empty properties.
 let geometryToFeature (g: Geometry) : GeoJsonFeature =
     {
         geometry   = g
         properties = { name = None; coordType = None; extra = Map.empty }
     }
 
+/// Converts a GeoJSON feature DTO into the domain representation, surfacing parse errors.
 let featureFromDto (f: GeoJsonFeatureDto) : GeoJsonFeature =
     try
         { geometry   = geometryFromDto f.geometry
@@ -318,6 +322,7 @@ let private betweenParens (s: string) =
         failwithf "Invalid WKT: %s" s
     s.Substring(openIdx + 1, closeIdx - openIdx - 1).Trim()
 
+/// Parses Well-Known Text (WKT) into a domain ``Geometry`` value.
 let geometryFromWkt (wkt: string) : Geometry =
     let s = stripSridPrefix wkt
 
@@ -391,6 +396,7 @@ let geometryFromWkt (wkt: string) : Geometry =
     else
         failwithf "Unsupported or invalid WKT geometry: %s" wkt
 
+/// Serializes a domain ``Geometry`` into its WKT representation.
 let geometryToWkt (g: Geometry) : string =
     match g with
     | Point p ->
@@ -418,11 +424,11 @@ let geometryToWkt (g: Geometry) : string =
 
         $"POLYGON({ringsText})"
 
-// Helper for DB if you want to go via Feature
-
+/// Serializes a domain ``GeoJsonFeature`` to WKT using its geometry component.
 let featureToWkt (f: GeoJsonFeature) : string =
     geometryToWkt f.geometry
 
+/// Serializes a feature collection to a list of WKT strings.
 let featureCollectionToWkts (fc: GeoJsonFeatureCollection) : string list =
     fc.features |> List.map featureToWkt
 
@@ -489,6 +495,7 @@ let serializeGeometryToWkt (g: Geometry) : string =
 let featureToDbWkt (feature: GeoJsonFeature) : string =
     serializeGeometryToWkt feature.geometry
     
+/// Converts a GeoJSON feature DTO into a database-ready WKT string.
 let featureDtoToDbWkt (feature: GeoJsonFeatureDto) : string =
     featureFromDto feature
     |> featureToDbWkt

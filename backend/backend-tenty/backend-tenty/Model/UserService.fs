@@ -1,4 +1,5 @@
-﻿module backend_tenty.Model.UserService
+﻿/// User-centric helper functions for validation and mapping.
+module backend_tenty.Model.UserService
 open backend_tenty.Service.ResultExt
 
 open backend_tenty.Model.Conversion.DTOConversion

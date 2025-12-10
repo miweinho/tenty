@@ -1,4 +1,5 @@
-﻿module backend_tenty.Database
+﻿/// Data access layer for PostgreSQL interactions.
+module backend_tenty.Database
 
 open System.Threading.Tasks
 open Npgsql
@@ -8,7 +9,7 @@ open backend_tenty.Model.Conversion.DBConversions
 
 let connectionString = "Host=localhost;Database=tenty;Username=tenty_user;Password=tenty_password"
 
-// Connection Test
+/// Verifies that the configured connection string can reach the database.
 let testConnection () =
     try
         connectionString
@@ -23,7 +24,7 @@ let testConnection () =
         printfn "❌ Database connection failed: %s" ex.Message
         false
 
-// Database functions to modify Users:
+/// Loads a user record by id from the database.
 let loadUserById (id: int) : Task<Result<DbUser, string>> = task {
     try
         let! rows =
@@ -50,6 +51,7 @@ let loadUserById (id: int) : Task<Result<DbUser, string>> = task {
     | ex -> return Error $"Database error: {ex.Message}"
   }
     
+/// Fetches a user by email address.
 let loadUserByMail (mail: string) : Task<Result<DbUser, string>> = task {
     try
 
@@ -77,6 +79,7 @@ let loadUserByMail (mail: string) : Task<Result<DbUser, string>> = task {
     | ex -> return Error $"Database error: {ex.Message}"
 }
     
+/// Checks how many users exist with the provided email address.
 let checkForUserByEmail (email: string): Task<Result<int, string>> = task {
     try
         let! rows =
@@ -93,6 +96,7 @@ let checkForUserByEmail (email: string): Task<Result<int, string>> = task {
     | ex -> return Error $"Database error: {ex.Message}"
 }
 
+/// Inserts a new user record derived from the domain model.
 let addNewUser (user: User) : Task<Result<int, string>> = task {
     try
         let dbUser = domainUserToDb user
@@ -107,6 +111,7 @@ let addNewUser (user: User) : Task<Result<int, string>> = task {
     | ex -> return Error $"Database error: {ex.Message}"
 }
     
+/// Updates an existing user with the provided domain values.
 let updateUser (user: User) : Task<Result<int, string>> = task {
     try
         let dbUser = domainUserToDb user
@@ -124,8 +129,7 @@ let updateUser (user: User) : Task<Result<int, string>> = task {
     | ex -> return Error $"Database error: {ex.Message}"
 }
 
-// Converted following functions to Task-based async implementations
-
+/// Returns all camps owned by or shared with a given user.
 let getAllCampsForUser (id: int) : Task<Result<DbCamp list, string>> = task {
     try
         let! rows =
@@ -152,6 +156,7 @@ let getAllCampsForUser (id: int) : Task<Result<DbCamp list, string>> = task {
     | ex -> return Error $"Database error: {ex.Message}"
 }
 
+/// Retrieves a camp by id including geometry as GeoJSON.
 let getCampById (campId: int) : Task<Result<DbCamp, string>> = task {
     try
         let! rows =
@@ -178,6 +183,7 @@ let getCampById (campId: int) : Task<Result<DbCamp, string>> = task {
     | ex -> return Error $"Database error: {ex.Message}"
 }
     
+/// Returns camps with the caller's permission level for authorization checks.
 let getAllCampsWithPermissionForUser (id: int) : Task<Result<CampPermissionSummary list, string>> = task {
     try
         let! rows =
@@ -201,6 +207,7 @@ let getAllCampsWithPermissionForUser (id: int) : Task<Result<CampPermissionSumma
     | ex -> return Error $"Database error: {ex.Message}"
 }
     
+/// Retrieves camp-user membership rows for a user id.
 let getCampUserForUser (id: int) : Task<Result<DbCampUser list ,string>> = task {
     try
         let! rows =
@@ -224,6 +231,7 @@ let getCampUserForUser (id: int) : Task<Result<DbCampUser list ,string>> = task 
     | ex -> return Error $"Database error: {ex.Message}"
 }
     
+/// Retrieves camp-user membership rows for a camp id.
 let getCampUserForCamp (campId: int) : Task<Result<DbCampUser list, string>> = task {
     try
         let! rows =
@@ -244,6 +252,7 @@ let getCampUserForCamp (campId: int) : Task<Result<DbCampUser list, string>> = t
     | ex -> return Error $"Database error: {ex.Message}"
 }
     
+/// Loads camp detail metadata for the specified camp.
 let getCampDetailForCamp (camp_id: int): Task<Result<DbCampDetail, string>> = task {
     try
         let! rows =
@@ -271,6 +280,7 @@ let getCampDetailForCamp (camp_id: int): Task<Result<DbCampDetail, string>> = ta
     | ex -> return Error $"Database error: {ex.Message}"
 }
     
+/// Returns detail list entries linked to a camp's detail record.
 let getDetailListEntriesForCamp (camp_id: int): Task<Result<DbDetailListEntry list, string>> = task {
     try
         let! rows =
@@ -293,6 +303,7 @@ let getDetailListEntriesForCamp (camp_id: int): Task<Result<DbDetailListEntry li
     | ex -> return Error $"Database error: {ex.Message}"
 }
     
+/// Fetches camp zones filtered by delimitation flag for a camp id.
 let getCampZonesForCamp (camp_id: int, isDelimitation: bool): Task<Result<DbCampZone list, string>> = task {
     try
         let! rows =
@@ -322,6 +333,7 @@ let getCampZonesForCamp (camp_id: int, isDelimitation: bool): Task<Result<DbCamp
     | ex -> return Error $"Database error: {ex.Message}"
 }
     
+/// Lists configured map layers visible for a camp.
 let getShownMaps (camp_id: int): Task<Result<DbShownMap list, string>> = task {
     try
         let! rows =
@@ -343,7 +355,7 @@ let getShownMaps (camp_id: int): Task<Result<DbShownMap list, string>> = task {
     | ex -> return Error $"Database error: {ex.Message}"
 }
 
-// Add new DbUser (returns inserted id) - accept NewDbUserDto
+/// Inserts a new database user row and returns the generated id.
 let addNewDbUser (dto: NewDbUserDto) : Task<Result<int, string>> = task {
     try
         let! ids =
@@ -360,7 +372,7 @@ let addNewDbUser (dto: NewDbUserDto) : Task<Result<int, string>> = task {
     | ex -> return Error $"Database error: {ex.Message}"
 }
 
-// Add a new camp (returns inserted id). Accept NewDbCampDto
+/// Inserts a camp record and returns the generated id.
 let addNewDbCamp (dto: NewDbCampDto) : Task<Result<int, string>> = task {
     try
         let! ids =
@@ -377,7 +389,7 @@ let addNewDbCamp (dto: NewDbCampDto) : Task<Result<int, string>> = task {
     | ex -> return Error $"Database error: {ex.Message}"
 }
 
-// Add new CampZone (returns inserted id). Accept NewDbCampZoneDto
+/// Persists updates to an existing camp row.
 let updateDbCamp (dbCamp: DbCamp) : Task<Result<int, string>> = task {
     try
         let! affected =
@@ -401,6 +413,7 @@ let updateDbCamp (dbCamp: DbCamp) : Task<Result<int, string>> = task {
 }
 
 
+/// Inserts a new camp zone and returns its id.
 let addNewDbCampZone (dto: NewDbCampZoneDto) : Task<Result<int, string>> = task {
     try
         let! ids =
@@ -421,6 +434,7 @@ let addNewDbCampZone (dto: NewDbCampZoneDto) : Task<Result<int, string>> = task 
     | ex -> return Error $"Database error: {ex.Message}"
 }
 
+/// Updates an existing camp zone with new values.
 let updateDbCampZone (dbZone: DbCampZone) : Task<Result<int, string>> = task {
     try
         let! affected =
@@ -437,7 +451,7 @@ let updateDbCampZone (dbZone: DbCampZone) : Task<Result<int, string>> = task {
     | ex -> return Error $"Database error: {ex.Message}"
 }
 
-// Add new CampUser (returns affected rows or inserted composite key). Many schemas don't return id for join table; return affected rows.
+/// Inserts a new camp-user relationship row.
 let addNewDbCampUser (dto: NewDbCampUserDto) : Task<Result<int, string>> = task {
     try
         let! affected =
@@ -451,6 +465,7 @@ let addNewDbCampUser (dto: NewDbCampUserDto) : Task<Result<int, string>> = task 
     | ex -> return Error $"Database error: {ex.Message}"
 }
 
+/// Updates the permission of an existing camp-user relationship.
 let updateDbCampUser (dbCampUser: DbCampUser) : Task<Result<int, string>> = task {
     try
         let! affected =
@@ -467,6 +482,7 @@ let updateDbCampUser (dbCampUser: DbCampUser) : Task<Result<int, string>> = task
     | ex -> return Error $"Database error: {ex.Message}"
 }
 
+/// Inserts camp detail data and returns the generated id.
 let addNewDbCampDetail (dto: NewDbCampDetailDto) : Task<Result<int, string>> = task {
     try
         let! ids =
@@ -483,6 +499,7 @@ let addNewDbCampDetail (dto: NewDbCampDetailDto) : Task<Result<int, string>> = t
     | ex -> return Error $"Database error: {ex.Message}"
 }
 
+/// Updates persisted camp detail information.
 let updateDbCampDetail (dbDetail: DbCampDetail) : Task<Result<int, string>> = task {
     try
         let! affected =
@@ -690,6 +707,7 @@ let updateDbDetailListEntry (entry: DbDetailListEntry) : Task<Result<int, string
     | ex -> return Error $"Database error: {ex.Message}"
 }
     
+/// Retrieves all features for a camp as raw database rows.
 let getFeaturesForCamp (campId: int) : Task<Result<DbFeature list, string>> = task {
     try
         let! rows =
@@ -720,6 +738,7 @@ let getFeaturesForCamp (campId: int) : Task<Result<DbFeature list, string>> = ta
     | ex -> return Error $"Database error: {ex.Message}"
 }
 
+/// Loads a feature by id including its geometry.
 let getFeatureById (featureId: int) : Task<Result<DbFeature, string>> = task {
     try
         let! rows =
@@ -753,6 +772,7 @@ let getFeatureById (featureId: int) : Task<Result<DbFeature, string>> = task {
     | ex -> return Error $"Database error: {ex.Message}"
 }
 
+/// Retrieves detail records attached to a feature.
 let getFeatureDetails (featureId: int) : Task<Result<DbFeatureDetail list, string>> = task {
     try
         let! rows =
@@ -776,6 +796,7 @@ let getFeatureDetails (featureId: int) : Task<Result<DbFeatureDetail list, strin
     | ex -> return Error $"Database error: {ex.Message}"
 }
 
+/// Inserts a new feature row and returns its id.
 let addNewFeature (dto: NewDbFeatureDto) : Task<Result<int, string>> = task {
     try
         let! ids =
@@ -804,6 +825,7 @@ let addNewFeature (dto: NewDbFeatureDto) : Task<Result<int, string>> = task {
     | ex -> return Error $"Database error: {ex.Message}"
 }
 
+/// Inserts a feature detail row tied to the given feature id.
 let addNewFeatureDetail (dto: NewDbFeatureDetailDto) : Task<Result<int, string>> = task {
     try
         let! ids =
@@ -825,6 +847,7 @@ let addNewFeatureDetail (dto: NewDbFeatureDetailDto) : Task<Result<int, string>>
     | ex -> return Error $"Database error: {ex.Message}"
 }
 
+/// Updates an existing feature row with new values.
 let updateDbFeature (dto: DbFeature) : Task<Result<int, string>> = task {
     try
         let! affected =
@@ -855,6 +878,7 @@ let updateDbFeature (dto: DbFeature) : Task<Result<int, string>> = task {
     | ex -> return Error $"Database error: {ex.Message}"
 }
 
+/// Deletes all detail rows for the specified feature.
 let deleteFeatureDetails (featureId: int) : Task<Result<int, string>> = task {
     try
         let! affected =
@@ -869,6 +893,7 @@ let deleteFeatureDetails (featureId: int) : Task<Result<int, string>> = task {
     | ex -> return Error $"Database error: {ex.Message}"
 }
 
+/// Deletes a feature by id and returns affected row count.
 let deleteFeatureById (featureId: int) : Task<Result<int, string>> = task {
     try
         let! affected =
@@ -887,6 +912,7 @@ let deleteFeatureById (featureId: int) : Task<Result<int, string>> = task {
 }
 // DB Functions used by UserController to modify RefreshTokens
 
+/// Retrieves a stored refresh token by its hash value.
 let getRefreshToken (token: RefreshTokenDTO) : Task<Result<DbRefreshToken, string>> = task {
     try
 
@@ -909,6 +935,7 @@ let getRefreshToken (token: RefreshTokenDTO) : Task<Result<DbRefreshToken, strin
     | ex -> return Error $"Database error: {ex.Message}"
 }
     
+/// Deletes a refresh token entry by its hash value.
 let deleteRefreshToken (token: RefreshTokenDTO) : Task<Result<int, string>> = task {
     try
         let! affectedRows =
@@ -926,6 +953,7 @@ let deleteRefreshToken (token: RefreshTokenDTO) : Task<Result<int, string>> = ta
     | ex -> return Error $"Database error: {ex.Message}"
 }
     
+/// Removes refresh tokens belonging to the specified user id.
 let deleteRefreshTokenByUserId (user :User) : Task<Result<int, string>> = task {
     try
         let! affectedRows =
@@ -943,6 +971,7 @@ let deleteRefreshTokenByUserId (user :User) : Task<Result<int, string>> = task {
     | ex -> return Error $"Database error: {ex.Message}"
 }
    
+/// Persists a new refresh token row.
 let addRefreshToken (token: DbRefreshToken) : Task<Result<int, string>> = task {
     try
         let! affectedRows =
