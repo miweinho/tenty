@@ -112,7 +112,7 @@ let ``validateGeoJsonFeatureLocation reports malformed coordinates`` () =
 
 [<Fact>]
 let ``validateParentCamp finds matching id`` () =
-    let camps = [ { Id = 1; OwnerId = 2; CampName = "Parent"; Location = "loc"; IsSubCamp = false; ParentId = None; CreatedAt = None; UpdatedAt = None } ]
+    let camps: DbCamp list = [ { Id = 1; OwnerId = 2; CampName = "Parent"; Location = "loc"; IsSubCamp = false; ParentId = None; CreatedAt = None; UpdatedAt = None } ]
 
     match validateParentCamp camps 1 with
     | Ok camp -> Assert.Equal(1, camp.Id)

@@ -24,6 +24,7 @@
         <Compile Include="Model\UserService.fs" />
         <Compile Include="Model\AuthService.fs" />
         <Compile Include="Model\CampService.fs" />
+        <Compile Include="Model\FeatureService.fs" />
     </ItemGroup>
 
     <ItemGroup>
@@ -33,6 +34,7 @@
       <Content Include="Dockerfile" />
       <Compile Include="Controller\CampController.fs" />
       <Compile Include="Controller\UserController.fs" />
+      <Compile Include="Controller\FeatureController.fs" />
       <Compile Include="Program.fs" />
       
     </ItemGroup>

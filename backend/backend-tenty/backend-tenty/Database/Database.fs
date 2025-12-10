@@ -690,6 +690,140 @@ let updateDbDetailListEntry (entry: DbDetailListEntry) : Task<Result<int, string
     | ex -> return Error $"Database error: {ex.Message}"
 }
     
+let getFeaturesForCamp (campId: int) : Task<Result<DbFeature list, string>> = task {
+    try
+        let! rows =
+            connectionString
+            |> Sql.connect
+            |> Sql.query "SELECT id, camp_id, kind, name, ST_AsGeoJSON(geom,6) AS geojson, heading_deg, length_m, width_m, color, icon, props, created_at, updated_at FROM tenty.features WHERE camp_id = @camp_id"
+            |> Sql.parameters [ "@camp_id", Sql.int campId ]
+            |> Sql.executeAsync (fun read ->
+                {
+                    Id = read.int "id"
+                    CampId = read.int "camp_id"
+                    Kind = read.string "kind"
+                    Name = read.stringOrNone "name"
+                    Geometry = read.text "geojson"
+                    HeadingDeg = read.doubleOrNone "heading_deg"
+                    LengthM = read.doubleOrNone "length_m"
+                    WidthM = read.doubleOrNone "width_m"
+                    Color = read.stringOrNone "color"
+                    Icon = read.stringOrNone "icon"
+                    Props = read.textOrNone "props"
+                    CreatedAt = read.datetimeOffsetOrNone "created_at"
+                    UpdatedAt = read.datetimeOffsetOrNone "updated_at"
+                }
+            )
+
+        return Ok rows
+    with
+    | ex -> return Error $"Database error: {ex.Message}"
+}
+
+let getFeatureById (featureId: int) : Task<Result<DbFeature, string>> = task {
+    try
+        let! rows =
+            connectionString
+            |> Sql.connect
+            |> Sql.query "SELECT id, camp_id, kind, name, ST_AsGeoJSON(geom,6) AS geojson, heading_deg, length_m, width_m, color, icon, props, created_at, updated_at FROM tenty.features WHERE id = @id"
+            |> Sql.parameters [ "@id", Sql.int featureId ]
+            |> Sql.executeAsync (fun read ->
+                {
+                    Id = read.int "id"
+                    CampId = read.int "camp_id"
+                    Kind = read.string "kind"
+                    Name = read.stringOrNone "name"
+                    Geometry = read.text "geojson"
+                    HeadingDeg = read.doubleOrNone "heading_deg"
+                    LengthM = read.doubleOrNone "length_m"
+                    WidthM = read.doubleOrNone "width_m"
+                    Color = read.stringOrNone "color"
+                    Icon = read.stringOrNone "icon"
+                    Props = read.textOrNone "props"
+                    CreatedAt = read.datetimeOffsetOrNone "created_at"
+                    UpdatedAt = read.datetimeOffsetOrNone "updated_at"
+                }
+            )
+
+        return
+            match rows |> List.tryHead with
+            | Some feature -> Ok feature
+            | None -> Error $"Feature with id {featureId} not found"
+    with
+    | ex -> return Error $"Database error: {ex.Message}"
+}
+
+let getFeatureDetails (featureId: int) : Task<Result<DbFeatureDetail list, string>> = task {
+    try
+        let! rows =
+            connectionString
+            |> Sql.connect
+            |> Sql.query "SELECT id, feature_id, title, content, created_at, updated_at FROM tenty.feature_details WHERE feature_id = @feature_id"
+            |> Sql.parameters [ "@feature_id", Sql.int featureId ]
+            |> Sql.executeAsync (fun read ->
+                {
+                    Id = read.int "id"
+                    FeatureId = read.int "feature_id"
+                    Title = read.string "title"
+                    Content = read.text "content"
+                    CreatedAt = read.datetimeOffsetOrNone "created_at"
+                    UpdatedAt = read.datetimeOffsetOrNone "updated_at"
+                }
+            )
+
+        return Ok rows
+    with
+    | ex -> return Error $"Database error: {ex.Message}"
+}
+
+let addNewFeature (dto: NewDbFeatureDto) : Task<Result<int, string>> = task {
+    try
+        let! ids =
+            connectionString
+            |> Sql.connect
+            |> Sql.query "INSERT INTO tenty.features (camp_id, kind, name, geom, heading_deg, length_m, width_m, color, icon, props) VALUES (@camp_id, @kind, @name, ST_SetSRID(ST_GeomFromText(@geometry), 4326), @heading_deg, @length_m, @width_m, @color, @icon, @props) RETURNING id"
+            |> Sql.parameters [
+                "@camp_id", Sql.int dto.CampId
+                "@kind", Sql.string dto.Kind
+                "@name", Sql.stringOrNone dto.Name
+                "@geometry", Sql.text dto.Geometry
+                "@heading_deg", Sql.doubleOrNone dto.HeadingDeg
+                "@length_m", Sql.doubleOrNone dto.LengthM
+                "@width_m", Sql.doubleOrNone dto.WidthM
+                "@color", Sql.stringOrNone dto.Color
+                "@icon", Sql.stringOrNone dto.Icon
+                "@props", Sql.textOrNone dto.Props
+            ]
+            |> Sql.executeAsync (fun read -> read.int "id")
+
+        return
+            match ids |> List.tryHead with
+            | Some id -> Ok id
+            | None -> Error "Insert did not return an id"
+    with
+    | ex -> return Error $"Database error: {ex.Message}"
+}
+
+let addNewFeatureDetail (dto: NewDbFeatureDetailDto) : Task<Result<int, string>> = task {
+    try
+        let! ids =
+            connectionString
+            |> Sql.connect
+            |> Sql.query "INSERT INTO tenty.feature_details (feature_id, title, content) VALUES (@feature_id, @title, @content) RETURNING id"
+            |> Sql.parameters [
+                "@feature_id", Sql.int dto.FeatureId
+                "@title", Sql.string dto.Title
+                "@content", Sql.text dto.Content
+            ]
+            |> Sql.executeAsync (fun read -> read.int "id")
+
+        return
+            match ids |> List.tryHead with
+            | Some id -> Ok id
+            | None -> Error "Insert did not return an id"
+    with
+    | ex -> return Error $"Database error: {ex.Message}"
+}
 
 
 

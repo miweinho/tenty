@@ -1,6 +1,5 @@
 ﻿namespace backend_tenty.Controllers
 
-
 open Microsoft.AspNetCore.Authorization
 open Microsoft.AspNetCore.Mvc
 open Microsoft.Extensions.Logging

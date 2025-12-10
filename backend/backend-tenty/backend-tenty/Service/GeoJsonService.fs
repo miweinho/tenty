@@ -20,6 +20,7 @@ type Position = {
 
 type Geometry =
     | Point of Position
+    | LineString of Position list
     | Polygon of Position list list
 
 type FeatureProps = {
@@ -114,6 +115,16 @@ let private geometryToDto (g: Geometry) : GeoJsonGeometryDto =
         let coords = JsonSerializer.SerializeToElement([| p.lon; p.lat |], jsonOptions)
         { ``type`` = "Point"
           coordinates = coords }
+        
+    | LineString coords ->
+        let coordArray =
+            coords
+            |> List.map (fun p -> [| p.lon; p.lat |])
+            |> List.toArray
+            |> fun arr -> JsonSerializer.SerializeToElement(arr, jsonOptions)
+
+        { ``type`` = "LineString"
+          coordinates = coordArray }
 
     | Polygon rings ->
         // [[[lon,lat]; ...]; ...]
@@ -174,6 +185,30 @@ let private geometryFromDto (g: GeoJsonGeometryDto) : Geometry =
         let lat = arr.[1].GetDouble()
         Point { lon = lon; lat = lat }
 
+    | "LineString" ->
+        if g.coordinates.ValueKind <> JsonValueKind.Array then
+            failwith "Invalid LineString: coordinates must be an array"
+
+        let coords =
+            g.coordinates.EnumerateArray()
+            |> Seq.map (fun coord ->
+                if coord.ValueKind <> JsonValueKind.Array then
+                    failwith "Invalid LineString: each coordinate must be an array [lon, lat]"
+
+                let a = coord.EnumerateArray() |> Seq.toArray
+                if a.Length <> 2 then
+                    failwithf "Invalid LineString coordinate: expected [lon, lat], got %d elements" a.Length
+
+                { lon = a.[0].GetDouble()
+                  lat = a.[1].GetDouble() })
+            |> Seq.toList
+
+        if coords.Length < 2 then
+            failwith "Invalid LineString: expected at least 2 coordinates"
+
+        LineString coords
+
+    
     | "Polygon" ->
         if g.coordinates.ValueKind <> JsonValueKind.Array then
             failwith "Invalid Polygon: coordinates must be an array of linear rings"
@@ -295,6 +330,30 @@ let geometryFromWkt (wkt: string) : Geometry =
         let x = parseDouble parts.[0]
         let y = parseDouble parts.[1]
         Point { lon = x; lat = y }
+        
+    elif s.StartsWith("LINESTRING", StringComparison.OrdinalIgnoreCase) then
+        let content = betweenParens s
+
+        let coords =
+            content.Split([| ',' |], StringSplitOptions.RemoveEmptyEntries)
+            |> Array.map (fun coordText ->
+                let parts =
+                    coordText.Trim().Split(
+                        [| ' '; '\t' |],
+                        StringSplitOptions.RemoveEmptyEntries
+                    )
+
+                if parts.Length <> 2 then
+                    failwithf "Invalid LINESTRING coordinate in WKT: '%s'" coordText
+
+                { lon = parseDouble parts.[0]
+                  lat = parseDouble parts.[1] })
+            |> Array.toList
+
+        if coords.Length < 2 then
+            failwithf "Invalid LINESTRING WKT (needs at least 2 coordinates): %s" wkt
+
+        LineString coords
 
     elif s.StartsWith("POLYGON", StringComparison.OrdinalIgnoreCase) then
         let content = betweenParens s
@@ -335,8 +394,16 @@ let geometryFromWkt (wkt: string) : Geometry =
 let geometryToWkt (g: Geometry) : string =
     match g with
     | Point p ->
-        // Example: "POINT(2600000 1200000)"
         $"POINT({formatDouble p.lon} {formatDouble p.lat})"
+        
+    | LineString coords ->
+        // LINESTRING(x1 y1, x2 y2, ...)
+        let coordsText =
+            coords
+            |> List.map (fun p -> $"{formatDouble p.lon} {formatDouble p.lat}")
+            |> String.concat ", "
+
+        $"LINESTRING({coordsText})"
 
     | Polygon rings ->
         // POLYGON((x1 y1, x2 y2,...),(...hole...))
