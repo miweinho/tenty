@@ -9,6 +9,7 @@ open backend_tenty.Model.Types.String50
 open backend_tenty.Model.Validation.ValidateDbData
 open backend_tenty.Service.GeoJsonService
 open backend_tenty.Service.ResultExt
+open System.Text.Json
 
         //Used to translate Permission stored as int into fsharp type. Since there are only entries for user
     //with permission, the default case is Read.
@@ -143,3 +144,149 @@ let dbShownMapsToDomain (shownMaps: DbShownMap list) : Result<String50 list, str
     )
     |> sequenceResultsList
     
+let featureKindToString (kind: FeatureKind) : string =
+    match kind with
+    | FeatureKind.Tent -> "tent"
+    | FeatureKind.Toilet -> "toilet"
+    | FeatureKind.Power -> "power"
+    | FeatureKind.Water -> "water"
+    | FeatureKind.Gate -> "gate"
+    | FeatureKind.Custom -> "custom"
+
+let featureKindFromString (kind: string) : Result<FeatureKind, string> =
+    match kind.ToLowerInvariant() with
+    | "tent" -> Ok FeatureKind.Tent
+    | "toilet" -> Ok FeatureKind.Toilet
+    | "power" -> Ok FeatureKind.Power
+    | "water" -> Ok FeatureKind.Water
+    | "gate" -> Ok FeatureKind.Gate
+    | "custom" -> Ok FeatureKind.Custom
+    | other -> Error $"Unsupported feature kind: {other}"
+
+let private optionToResult errorMsg opt =
+    match opt with
+    | Some v -> Ok v
+    | None -> Error errorMsg
+
+let private optionMapResult (mapper: 'a -> Result<'b, string>) (value: 'a option) : Result<'b option, string> =
+    match value with
+    | Some v -> mapper v |> Result.map Some
+    | None -> Ok None
+
+let private geometryTextToFeature (geomText: string) : Result<GeoJsonFeature, string> =
+    try
+        geomText
+        |> geometryFromJson
+        |> geometryToFeature
+        |> Ok
+    with _ ->
+        try
+            geomText
+            |> geometryFromWkt
+            |> geometryToFeature
+            |> Ok
+        with ex -> Error $"Invalid geometry: {ex.Message}"
+
+let private parsePropsJson (props: string option) : Result<JsonElement option, string> =
+    match props with
+    | None -> Ok None
+    | Some p when String.IsNullOrWhiteSpace p -> Ok None
+    | Some p ->
+        try
+            let doc = JsonDocument.Parse(p)
+            Ok (Some (doc.RootElement.Clone()))
+        with ex -> Error $"Invalid props json: {ex.Message}"
+let dbFeatureToDomain (dbFeature: DbFeature) : Result<Feature, string> =
+    result {
+        let! kind = featureKindFromString dbFeature.Kind
+        let! name = optionMapResult (fun n -> String50.create n |> optionToResult "Invalid feature name") dbFeature.Name
+        let! icon = optionMapResult (fun i -> String50.create i |> optionToResult "Invalid icon value") dbFeature.Icon
+        let! color =
+            dbFeature.Color
+            |> Option.map parseHtmlColor
+            |> Option.map (Result.map Some)
+            |> Option.defaultValue (Ok None)
+        let! geometry = geometryTextToFeature dbFeature.Geometry
+
+        return {
+            Id = dbFeature.Id
+            CampId = dbFeature.CampId
+            Kind = kind
+            Name = name
+            Geometry = geometry
+            HeadingDeg = dbFeature.HeadingDeg
+            LengthM = dbFeature.LengthM
+            WidthM = dbFeature.WidthM
+            Color = color
+            Icon = icon
+            Props = dbFeature.Props
+            Details = None
+            CreatedAt = dbFeature.CreatedAt
+            UpdatedAt = dbFeature.UpdatedAt
+        }
+    }
+
+let dbFeatureDetailToDomain (dbDetail: DbFeatureDetail) : Result<FeatureDetail, string> =
+    result {
+        let! title =
+            dbDetail.Title
+            |> String50.create
+            |> optionToResult "Invalid feature detail title"
+
+        return {
+            Id = dbDetail.Id
+            FeatureId = dbDetail.FeatureId
+            Title = title
+            Content = dbDetail.Content
+            CreatedAt = dbDetail.CreatedAt
+            UpdatedAt = dbDetail.UpdatedAt
+        }
+    }
+
+let domainFeatureToDb (feature: Feature) : DbFeature =
+    {
+        Id = feature.Id
+        CampId = feature.CampId
+        Kind = featureKindToString feature.Kind
+        Name = feature.Name |> Option.map string50Value
+        Geometry = featureToDbWkt feature.Geometry
+        HeadingDeg = feature.HeadingDeg
+        LengthM = feature.LengthM
+        WidthM = feature.WidthM
+        Color = feature.Color |> Option.map ColorTranslator.ToHtml
+        Icon = feature.Icon |> Option.map string50Value
+        Props = feature.Props
+        CreatedAt = feature.CreatedAt
+        UpdatedAt = feature.UpdatedAt
+    }
+
+let domainFeatureDetailToDb (detail: FeatureDetail) : DbFeatureDetail =
+    {
+        Id = detail.Id
+        FeatureId = detail.FeatureId
+        Title = detail.Title |> string50Value
+        Content = detail.Content
+        CreatedAt = detail.CreatedAt
+        UpdatedAt = detail.UpdatedAt
+    }
+    
+let domainFeatureToNewDb (feature: Feature) : NewDbFeatureDto =
+    {
+        CampId = feature.CampId
+        Kind = featureKindToString feature.Kind
+        Name = feature.Name |> Option.map string50Value
+        Geometry = feature.Geometry |> featureToDbWkt
+        HeadingDeg = feature.HeadingDeg
+        LengthM = feature.LengthM
+        WidthM = feature.WidthM
+        Color = feature.Color |> Option.map ColorTranslator.ToHtml
+        Icon = feature.Icon |> toStringOption
+        Props = feature.Props
+    }
+    
+let featureDetailToNewDb (featureId: int) (detail: FeatureDetail) : NewDbFeatureDetailDto =
+    {
+        FeatureId = featureId
+        Title = string50Value detail.Title
+        Content = detail.Content
+    }

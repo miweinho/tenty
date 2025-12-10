@@ -4,6 +4,7 @@ open System
 open System.Drawing
 open System.Threading.Tasks
 open backend_tenty.Model.Conversion.DBConversions
+open backend_tenty.Model.Conversion.DTOConversion
 open backend_tenty.Model.Types
 open backend_tenty.Database
 open backend_tenty.Service.ResultExt
@@ -22,8 +23,21 @@ let loadDbUsersByCampUsers (dbCampUsers: DbCampUser list) : Task<Result<(DbCampU
         for cu in dbCampUsers do
             let! user = loadUserById cu.UserId
             acc <- (cu, user) :: acc
-        return List.rev acc    
+        return List.rev acc
 }
+    
+let getCampsForUser (userId: int) : Task<Result<CampDto list, CampLoadError>> =
+    taskResult {
+        let! dbCamps = getAllCampsForUser userId |> mapTaskError CampLoadError.DbError
+        let! converted =
+            dbCamps
+            |> List.map dbCampToDto
+            |> sequenceResultsList
+            |> Task.FromResult
+            |> mapTaskError CampLoadError.InvalidPropertyValue
+        return converted
+    }
+
 
 
 //let buildCamp (dbCamp: DbCamp, dbCampUser: DbCampUser list option, dbCampZone: DbCampZone list) : Camp =
@@ -80,7 +94,7 @@ let loadAndBuildCamp(campId: int) : Task<Result<Camp, CampLoadError>> =
         IsSubCamp = dbCamp.IsSubCamp
         SubCamp = Some [ ]
         CampDetail = campDetails
-        ShownMaps = shownMaps        
+        ShownMaps = shownMaps
     }
     }
     
@@ -154,10 +168,61 @@ let private createNewDbCampDetailListEntryDto (detailListEntry: DetailListEntryD
 let private createNewDbShownMapsDto (mapName: string) : Result<NewDbShownMapsDto, string> =
     result {
         let! mapName = validateName mapName
-        
         return {
             CampId = 0 //Set to zerot to show invalid campId will be set in db transaction.
             MapName = mapName
+        }
+    }
+
+
+let private buildDbCampForUpdate (campId: int) (ownerId: int) (campDto: UpdateCampDto) : Task<Result<DbCamp, CampLoadError>> =
+    taskResult {
+        let! campName = validateName campDto.Name |> mapError CampLoadError.InvalidPropertyValue
+        let! locationValidated = validateGeoJsonFeatureLocation campDto.Location |> mapError CampLoadError.InvalidPropertyValue
+        let stringLocation = featureDtoToDbWkt locationValidated
+        let parentId = if campDto.IsSubCamp && campDto.ParentId > 0 then Some campDto.ParentId else None
+
+        return {
+            DbCamp.Id = campId
+            OwnerId = ownerId
+            CampName = campName
+            Location = stringLocation
+            IsSubCamp = campDto.IsSubCamp
+            ParentId = parentId
+            CreatedAt = None
+            UpdatedAt = None
+        }
+    }
+
+let private buildDbCampZoneForUpdate (campId: int) (existingZone: DbCampZone) (zone: CampZoneDto) : Result<DbCampZone, CampLoadError> =
+    result {
+        let! validated = createNewDbCampZoneDto zone |> mapError CampLoadError.InvalidPropertyValue
+        return {
+            Id = existingZone.Id
+            CampId = campId
+            Name = validated.Name
+            IsCampDelimitation = validated.IsCampDelimitation
+            Color = validated.Color |> Option.defaultValue existingZone.Color
+            Zone = validated.Zone
+            CreatedAt = existingZone.CreatedAt
+            UpdatedAt = None
+        }
+    }
+
+let private buildDbCampDetailForUpdate (campId: int) (existingDetail: DbCampDetail) (detail: CampDetailDto) : Result<DbCampDetail, CampLoadError> =
+    result {
+        let! startDate = validateDateString detail.StartDate |> mapError CampLoadError.DetailsMissing
+        let! endDate = validateDateString detail.EndDate |> mapError CampLoadError.DetailsMissing
+        let! city = validateName detail.City |> mapError CampLoadError.DetailsMissing
+
+        return {
+            existingDetail with
+                CampId = campId
+                StartDate = startDate
+                EndDate = endDate
+                Description = detail.Description
+                City = city
+                UpdatedAt = None
         }
     }
     
@@ -210,3 +275,29 @@ let createCamp (campDto: CreateCampDto) (ownerId: int) : Task<Result<Camp, CampL
 //problem im moment:
 // uq_camp
 
+let updateCamp (campId: int) (userId: int) (campDto: UpdateCampDto) : Task<Result<Camp, CampLoadError>> =
+    taskResult {
+        let! existingCamp = getCampById campId |> mapTaskError CampLoadError.DbError
+        let! dbCamp = buildDbCampForUpdate campId existingCamp.OwnerId campDto
+
+        let! delimitationZone =
+            taskResult {
+                let! dbCampDelimitationList = getCampZonesForCamp (campId, true) |> mapTaskError CampLoadError.DbError
+                match dbCampDelimitationList with
+                | delim :: _ ->
+                    return! buildDbCampZoneForUpdate campId delim campDto.Delimitation |> Task.FromResult
+                | [] -> return! Task.FromResult(Error CampLoadError.ZonesMissing)
+            }
+
+        let! campDetail =
+            taskResult {
+                let! dbCampDetails = getCampDetailForCamp campId |> mapTaskError CampLoadError.DbError
+                return! buildDbCampDetailForUpdate campId dbCampDetails campDto.CampDetail |> Task.FromResult
+            }
+
+        let! _ = updateDbCamp dbCamp |> mapTaskError CampLoadError.DbError
+        let! _ = updateDbCampZone delimitationZone |> mapTaskError CampLoadError.DbError
+        let! _ = updateDbCampDetail campDetail |> mapTaskError CampLoadError.DbError
+
+        return! loadAndBuildCamp campId
+    }

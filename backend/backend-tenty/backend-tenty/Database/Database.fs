@@ -378,6 +378,29 @@ let addNewDbCamp (dto: NewDbCampDto) : Task<Result<int, string>> = task {
 }
 
 // Add new CampZone (returns inserted id). Accept NewDbCampZoneDto
+let updateDbCamp (dbCamp: DbCamp) : Task<Result<int, string>> = task {
+    try
+        let! affected =
+            connectionString
+            |> Sql.connect
+            |> Sql.query "UPDATE tenty.camps SET camp_name = @camp_name, loc = ST_SetSRID(ST_GeomFromText(@location), 4326), is_sub_camp = @is_sub_camp, parent_id = @parent_id WHERE id = @id"
+            |> Sql.parameters [
+                "@camp_name", Sql.string dbCamp.CampName
+                "@location", Sql.text dbCamp.Location
+                "@is_sub_camp", Sql.bool dbCamp.IsSubCamp
+                "@parent_id", Sql.intOrNone dbCamp.ParentId
+                "@id", Sql.int dbCamp.Id
+            ]
+            |> Sql.executeNonQueryAsync
+        return
+            match affected with
+            | 0 -> Error $"Camp with id {dbCamp.Id} not found"
+            | n -> Ok n
+    with
+    | ex -> return Error $"Database error: {ex.Message}"
+}
+
+
 let addNewDbCampZone (dto: NewDbCampZoneDto) : Task<Result<int, string>> = task {
     try
         let! ids =
@@ -403,7 +426,7 @@ let updateDbCampZone (dbZone: DbCampZone) : Task<Result<int, string>> = task {
         let! affected =
             connectionString
             |> Sql.connect
-            |> Sql.query "UPDATE tenty.camp_zones SET camp_id = @camp_id, name = @name, is_camp_delimitation = @is_delimitation, color = @color, geom = ST_SetSRID(ST_GeomFromText(@zone), 4326), updated_at = NOW() WHERE id = @id"
+            |> Sql.query "UPDATE tenty.camp_zones SET camp_id = @camp_id, name = @name, is_camp_delimitation = @is_delimitation, color = @color, geom = ST_SetSRID(ST_GeomFromText(@zone), 4326) WHERE id = @id"
             |> Sql.parameters [ "@camp_id", Sql.int dbZone.CampId; "@name", Sql.string dbZone.Name; "@is_delimitation", Sql.bool dbZone.IsCampDelimitation; "@color", Sql.string dbZone.Color; "@zone", Sql.text dbZone.Zone; "@id", Sql.int dbZone.Id ]
             |> Sql.executeNonQueryAsync
         return
@@ -433,7 +456,7 @@ let updateDbCampUser (dbCampUser: DbCampUser) : Task<Result<int, string>> = task
         let! affected =
             connectionString
             |> Sql.connect
-            |> Sql.query "UPDATE tenty.camp_users SET user_permission = @permission, updated_at = NOW() WHERE user_id = @user_id AND camp_id = @camp_id"
+            |> Sql.query "UPDATE tenty.camp_users SET user_permission = @permission WHERE user_id = @user_id AND camp_id = @camp_id"
             |> Sql.parameters [ "@permission", Sql.int (int dbCampUser.UserPermission); "@user_id", Sql.int dbCampUser.UserId; "@camp_id", Sql.int dbCampUser.CampId ]
             |> Sql.executeNonQueryAsync
         return
@@ -465,8 +488,8 @@ let updateDbCampDetail (dbDetail: DbCampDetail) : Task<Result<int, string>> = ta
         let! affected =
             connectionString
             |> Sql.connect
-            |> Sql.query "UPDATE tenty.camp_details SET start_date = @start_date, end_date = @end_date, description = @description, city = @city, updated_at = NOW() WHERE id = @id"
-            |> Sql.parameters [ "@start_date", Sql.timestamp dbDetail.StartDate.UtcDateTime; "@end_date", Sql.timestamp dbDetail.EndDate.UtcDateTime; "@description", Sql.textOrNone dbDetail.Description; "@city", Sql.string dbDetail.City; "@id", Sql.int dbDetail.Id ]
+            |> Sql.query "UPDATE tenty.camp_details SET start_date = @start_date, end_date = @end_date, description = @description, city = @city WHERE id = @id"
+            |> Sql.parameters [ "@start_date", Sql.timestamptz dbDetail.StartDate.UtcDateTime; "@end_date", Sql.timestamptz dbDetail.EndDate.UtcDateTime; "@description", Sql.textOrNone dbDetail.Description; "@city", Sql.string dbDetail.City; "@id", Sql.int dbDetail.Id ]
             |> Sql.executeNonQueryAsync
         return
             match affected with
