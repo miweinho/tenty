@@ -1,4 +1,5 @@
-﻿module backend_tenty.Model.FeatureService
+﻿/// Domain logic for creating, reading, updating, and deleting features.
+module backend_tenty.Model.FeatureService
 
 open System.Drawing
 open System.Threading.Tasks

@@ -13,12 +13,11 @@ open backend_tenty.Model.Types
 [<Route("api/[controller]")>]
 type public UserController(logger: ILogger<UserController>, tokenCfg: TokenConfig) =
     inherit ControllerBase()
-        
+
+    /// Authenticates a user and issues access and refresh tokens.
     [<HttpPost("login")>]
     member this.NewLogin([<FromBody>] dto: LoginDTO) : Task<ActionResult> =
         task{
-            //Todo: Add real authentication
-            //Todo: Add better logger logic.
             let! result = processLogin tokenCfg dto
             match result with
             | Ok value ->
@@ -27,7 +26,8 @@ type public UserController(logger: ILogger<UserController>, tokenCfg: TokenConfi
                 logger.LogError("Error while logging in: {Error}", e)
                 return (this.BadRequest($"Error while logging in. Provide valid credentials.")) :> ActionResult
         }
-                    
+
+    /// Replaces an existing refresh token with a new token pair when the provided token is valid.
     [<HttpPost("refresh")>]
     member this.Refresh([<FromBody>] dto: RefreshTokenDTO) : Task<ActionResult> =
         task{
@@ -50,19 +50,18 @@ type public UserController(logger: ILogger<UserController>, tokenCfg: TokenConfi
                      | Error e ->
                          logger.LogError("Error while parsing Domain User {e}", e)
                          return this.BadRequest("Error while logging in.") :> ActionResult
-                     | Ok user ->
-                        let! newToken = generateTokenForUser tokenCfg user 
+                    | Ok user ->
+                        let! newToken = generateTokenForUser tokenCfg user
                         match newToken with
                         | Error e ->
                             logger.LogError("Error while generating Tokens: {e}", e)
                             return this.BadRequest("Error while logging in.") :>ActionResult
                         | Ok tokens ->
-                            // TODO Adjust refresh token per device so user dont get logged out everytime. Rethink deleteRefreshTokenByUserId.
-                        let! deleteResult = deleteRefreshTokenByUserId user 
+                        let! deleteResult = deleteRefreshTokenByUserId user
                         match deleteResult with
                         | Error e -> logger.LogError("Error while deleting RefreshToken: {e}", e)
                         | Ok _ -> ()
-                        let! newRefreshToken = generateDBRefreshToken user tokens |> addRefreshToken 
+                        let! newRefreshToken = generateDBRefreshToken user tokens |> addRefreshToken
                         match newRefreshToken with
                         | Error e ->
                             logger.LogError("Error while saving Refresh token: {e}", e)

@@ -1,4 +1,5 @@
-﻿namespace backend_tenty.Controller.FeatureController
+﻿/// API endpoints for managing camp features.
+namespace backend_tenty.Controller.FeatureController
 
 open Microsoft.AspNetCore.Authorization
 open Microsoft.AspNetCore.Mvc
@@ -12,9 +13,11 @@ open backend_tenty.Model.Types
 
 [<ApiController>]
 [<Route("api/[controller]")>]
+/// Exposes feature CRUD endpoints secured by camp permissions.
 type public FeatureController(logger: ILogger<FeatureController>) =
     inherit ControllerBase()
 
+    /// Converts domain-level feature errors into HTTP responses.
     member private this.handleFeatureError (err: FeatureError) (defaultMessage: string) =
         match fromFeatureError err with
         | AppError.NotFound msg -> this.NotFound(msg) :> IActionResult
@@ -25,6 +28,7 @@ type public FeatureController(logger: ILogger<FeatureController>) =
 
     [<HttpGet("camp/{campId}")>]
     [<Authorize>]
+    /// Returns all features for the specified camp when the caller has access.
     member this.GetFeaturesForCamp(campId: int) : Task<ActionResult<FeatureDto list>> =
         task {
             match checkClaimForPermission (this.HttpContext.User.FindFirst("camp_roles")) campId Read with
@@ -43,6 +47,7 @@ type public FeatureController(logger: ILogger<FeatureController>) =
 
     [<HttpGet("{id}")>]
     [<Authorize>]
+    /// Retrieves a single feature by id, enforcing camp-level permissions.
     member this.GetFeature(id: int) : Task<ActionResult<FeatureDto>> =
         task {
             let! featureResult = getFeatureByIdWithDetails id
@@ -61,6 +66,7 @@ type public FeatureController(logger: ILogger<FeatureController>) =
 
     [<HttpPost>]
     [<Authorize>]
+    /// Creates a new feature for a camp the caller can modify.
     member this.CreateFeature(featureDto: CreateFeatureDto) : Task<ActionResult<FeatureDto>> =
         task {
             match checkClaimForPermission (this.HttpContext.User.FindFirst("camp_roles")) featureDto.CampId Write with

@@ -1,4 +1,5 @@
-﻿module backend_tenty.Model.CampService
+﻿/// Domain operations for loading and persisting camps.
+module backend_tenty.Model.CampService
 
 open System
 open System.Drawing
