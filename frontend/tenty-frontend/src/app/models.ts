@@ -174,3 +174,50 @@ export interface DbRefreshToken {
 export interface RefreshTokenDTO {
   token: string;
 }
+
+export type DrawType = 'Point' | 'LineString' | 'Polygon' | 'Circle';
+
+
+//Models for features:
+
+export type FeatureKind = 'tent' | 'toilet' | 'power' | 'water' | 'gate' | 'custom';
+
+export interface FeatureDetailDto {
+  id: number;
+  featureId: number;
+  title: string;
+  content: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface FeatureDto {
+  id: number;
+  campId: number;
+  kind: FeatureKind;
+  name?: string | null;
+  geometry: GeoJsonFeatureDto;
+  headingDeg?: number | null;
+  lengthM?: number | null;
+  widthM?: number | null;
+  color?: string | null;
+  icon?: string | null;
+  props?: string | null;
+  details?: FeatureDetailDto[] | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface CreateFeatureDto {
+  campId: number;
+  kind: FeatureKind;
+  name?: string | null;
+  geometry: GeoJsonFeatureDto;
+  headingDeg?: number | null;
+  lengthM?: number | null;
+  widthM?: number | null;
+  color?: string | null;
+  icon?: string | null;
+  props?: string | null;
+  details?: FeatureDetailDto[] | null;
+}

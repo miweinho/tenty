@@ -1,0 +1,19 @@
+.camps-list-container {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+mat-list-item {
+  cursor: pointer;
+}
+
+mat-list-item:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.no-camps-message,
+.loading-message {
+  padding: 24px;
+  text-align: center;
+  color: #999;
+}

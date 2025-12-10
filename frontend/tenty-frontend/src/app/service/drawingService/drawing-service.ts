@@ -1,15 +1,15 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { Draw, Modify, Select, Snap } from 'ol/interaction';
 import { Vector as VectorLayer } from 'ol/layer';
 import { Vector as VectorSource } from 'ol/source';
 import Map from 'ol/Map';
 import Feature from 'ol/Feature';
 import Geometry from 'ol/geom/Geometry';
-import { Point } from 'ol/geom';
+import { Point, Polygon } from 'ol/geom';
 import { Style, Fill, Stroke, Circle } from 'ol/style';
+import { DrawType } from '../../models';
 
-export type DrawType = 'Point' | 'LineString' | 'Polygon' | 'Circle';
 
 @Injectable({
   providedIn: 'root'
@@ -31,6 +31,10 @@ export class DrawingService {
   // Observable für Features
   private featuresSubject = new BehaviorSubject<Feature<Geometry>[]>([]);
   public readonly features$ = this.featuresSubject.asObservable();
+
+  // feature click event
+  private featureClickSubject = new Subject<Feature<Geometry>>();
+  public readonly featureClick$ = this.featureClickSubject.asObservable();
 
   constructor() {
     // Listen to feature changes
@@ -54,6 +58,7 @@ export class DrawingService {
     this.map = map;
     this.map.addLayer(this.vectorLayer);
     this.setupInteractions();
+    this.setupClickListener(); // ADD THIS
   }
 
   private setupInteractions(): void {
@@ -70,6 +75,33 @@ export class DrawingService {
     // Snap
     this.snapInteraction = new Snap({ source: this.vectorSource });
     this.map.addInteraction(this.snapInteraction);
+  }
+
+  private setupClickListener(): void {
+    if (!this.map) return;
+
+    // listen to map click events
+    this.map.on('click', (event: any) => {
+      // hit detection: check if user clicked on a feature
+      const features: Feature<Geometry>[] = [];
+      this.map!.forEachFeatureAtPixel(
+        event.pixel,
+        (feature: any) => {
+          // nur Features aus unserem vectorLayer
+          if (feature instanceof Feature) {
+            features.push(feature);
+          }
+        },
+        {
+          layerFilter: (layer: any) => layer === this.vectorLayer
+        }
+      );
+
+      if (features.length > 0) {
+        const clickedFeature = features[0];
+        this.featureClickSubject.next(clickedFeature);
+      }
+    });
   }
 
   private removeInteractions(map: Map): void {
@@ -229,6 +261,26 @@ export class DrawingService {
     });
   }
 
+  /**
+   * Bestehende API beibehalten:
+   * bei Klick wird ein Punkt-Feature erstellt und hinzugefügt.
+   */
+  waitForClickAndCreatePolygon(): Promise<Feature<Polygon> | null> {
+    return new Promise(resolve => {
+      if (!this.map) {
+        resolve(null);
+        return;
+      }
+
+      this.map.once('singleclick', (evt: any) => {
+        const coord = evt.coordinate;
+        const feature = new Feature<Polygon>(new Polygon(coord));
+        this.vectorSource.addFeature(feature);
+        resolve(feature);
+      });
+    });
+  }
+
   // ---------------------------------------------------
   // Observable-Update
   // ---------------------------------------------------
@@ -257,5 +309,19 @@ export class DrawingService {
         }),
       }),
     });
+  }
+
+  /**
+   * Feature mit Metadata hinzufügen (z.B. campId, campName, camp-Objekt).
+   * Beim Click kann man diese Properties auslesen.
+   */
+  public addFeatureWithMetadata(
+    feature: Feature<Geometry>,
+    metadata?: Record<string, any>
+  ): void {
+    if (metadata) {
+      feature.setProperties(metadata);
+    }
+    this.vectorSource.addFeature(feature);
   }
 }

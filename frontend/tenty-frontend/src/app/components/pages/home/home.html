@@ -1,12 +1,42 @@
-<mat-card apparance="outlined">
+<mat-card appearance="outlined">
   <mat-card-header>
-    <mat-card-title> My Camps </mat-card-title>
+    <mat-card-title>My Camps</mat-card-title>
   </mat-card-header>
   <mat-card-content>
     <mat-tab-group>
-      <mat-tab label="List">here should be a list.</mat-tab>
-      <mat-tab label="Mapview"><div><app-camp-overview-map-view></app-camp-overview-map-view></div>
-        </mat-tab>
+      <!-- LIST TAB -->
+      <mat-tab label="List">
+        <div class="camps-list-container">
+          <mat-list>
+            @if (camps$ | async; as camps) {
+              @if (camps && camps.length > 0) {
+                @for (camp of camps; track camp.id) {
+                  <mat-list-item (click)="onCampSelect(camp)">
+                    <mat-icon matListItemIcon>camping</mat-icon>
+                    <div matListItemTitle>{{ camp.campName }}</div>
+                    <div matListItemLine>
+                      {{ camp.createdAt | date: 'short' }}
+                    </div>
+                  </mat-list-item>
+                  <mat-divider></mat-divider>
+                }
+              } @else {
+                <p class="no-camps-message">No camps found. Create one to get started!</p>
+              }
+            } @else {
+              <p class="loading-message">Loading camps...</p>
+            }
+          </mat-list>
+        </div>
+      </mat-tab>
+
+      <!-- MAP TAB -->
+      <mat-tab label="Mapview">
+        <app-camp-overview-map-view 
+          [externalCamps]="camps$ | async"
+          (campSelected)="onMapCampSelected($event)">
+        </app-camp-overview-map-view>
+      </mat-tab>
     </mat-tab-group>
   </mat-card-content>
 </mat-card>

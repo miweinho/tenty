@@ -1,35 +1,79 @@
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { CampDto } from '../models';
+import { inject, Injectable } from '@angular/core';
+import { BehaviorSubject, Observable, of, tap } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { CampDto, CreateCampDto } from '../models';
+import { HttpService } from '../components/http/http-service';
 
-export interface Location {
-  x: number;
-  y: number;
-}
-
-export interface Camp {
-  id?: string;
-  name: string;
-  location: Location;
-  delimitation?: Location[];
-}
 
 @Injectable({ providedIn: 'root' })
 export class CampService {
-  constructor(private http: HttpClient) {}
+  private http = inject(HttpService);
 
-  // Send the payload in the shape the backend expects (no id on create)
-  createCamp(camp: Omit<Camp, 'id'>): Observable<Camp> {
-    return this.http.post<Camp>('/api/camp', camp);
+  private campListSubject = new BehaviorSubject<CampDto[] | null>(null);
+  public readonly camps$ = this.campListSubject.asObservable();
+
+  loadCampList(force = false): Observable<CampDto[]> {
+    const cached = this.campListSubject.value;
+    if (cached && !force) {
+      return of(cached);
+    }
+
+    return this.http.get<any>('camp/list').pipe(
+      // normalize backend response (handles { $values: [...] } wrapping)
+      map(response => {
+        const campsArray: CampDto[] = Array.isArray(response)
+          ? response
+          : response?.$values ?? response?.items ?? response?.data ?? [];
+        return campsArray;
+      }),
+      tap(camps => this.campListSubject.next(camps))
+    );
   }
 
-  // Fetch all camps
-  getAll(): Observable<Camp[]> {
-    return this.http.get<Camp[]>('/api/camp');
+  refreshCampsList(): Observable<CampDto[]> {
+    return this.loadCampList(true);
   }
 
-  getCampsForUser(): Observable<CampDto[]> {
-    return this.http.get<CampDto[]>('/api/camp/list');
+  getCurrentCamps(): CampDto[] | null {
+    return this.campListSubject.value;
+  }
+
+  /**
+   * Create a new camp
+   */
+  createCamp(campDto: CreateCampDto): Observable<CampDto> {
+    return this.http.post<CampDto>('camp/create', campDto).pipe(
+      tap((newCamp) => {
+        console.log('Camp created successfully:', newCamp);
+        // refresh camps list after successful creation
+        this.refreshCampsList().subscribe();
+      })
+    );
+  }
+
+  /**
+   * Update an existing camp
+   */
+  updateCamp(id: number, campDto: CreateCampDto): Observable<CampDto> {
+    return this.http.put<CampDto>(`camp/update/${id}`, campDto).pipe(
+      tap((updatedCamp) => {
+        console.log('Camp updated successfully:', updatedCamp);
+        // refresh camps list after successful update
+        this.refreshCampsList().subscribe();
+      })
+    );
+  }
+
+  /**
+   * Delete a camp
+   */
+  deleteCamp(id: number): Observable<void> {
+    return this.http.delete<void>(`camp/delete/${id}`).pipe(
+      tap(() => {
+        console.log('Camp deleted successfully:', id);
+        // refresh camps list after successful deletion
+        this.refreshCampsList().subscribe();
+      })
+    );
   }
 }

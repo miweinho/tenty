@@ -1,0 +1,39 @@
+.pick-delimitation-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.map-wrapper {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.map-wrapper app-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.pick-delimitation-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pick-zone-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pick-zone-toolbar {
+  gap: 8px;
+}
+
+.spacer {
+  flex: 1;
+}

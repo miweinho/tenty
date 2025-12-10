@@ -1,104 +1,154 @@
 import { Component, inject } from '@angular/core';
-import { FormBuilder, FormArray, Validators, ReactiveFormsModule } from '@angular/forms';
-import { MatStepperModule } from '@angular/material/stepper';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatIconModule } from '@angular/material/icon';
+import {
+  FormBuilder,
+  FormArray,
+  FormControl,
+  FormGroup,
+  Validators,
+  ReactiveFormsModule,
+  AbstractControl,
+} from '@angular/forms';
 import { GeoJsonFeatureDto, CampZoneDto, CampDetailDto, CreateCampDto } from '../../../models';
+import { MatCardModule } from '@angular/material/card';
+import { MatStepperModule } from '@angular/material/stepper';
+import { MatIconModule } from '@angular/material/icon';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatFormFieldModule, MatLabel } from '@angular/material/form-field';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import { CommonModule } from '@angular/common';
+import { MatInputModule } from '@angular/material/input';
+import { CampService } from '../../../service/camp';
+import { PickLocationMapViewComponent } from '../../maps/pick-location-map-view/pick-location-map-view';
+import { PickZoneMapView } from '../../maps/pick-zone-map-view/pick-zone-map-view';
 
 @Component({
   selector: 'app-create-camp-form',
-  standalone: true,
   imports: [
+    MatCardModule,
     MatStepperModule,
+    MatIconModule,
+    MatLabel,
     MatFormFieldModule,
-    MatInputModule,
     MatButtonModule,
     MatCheckboxModule,
     MatDatepickerModule,
-    MatIconModule,
-    ReactiveFormsModule
+    MatNativeDateModule,
+    ReactiveFormsModule,
+    CommonModule,
+    MatInputModule,
+    PickLocationMapViewComponent,
+    PickZoneMapView
   ],
   templateUrl: './create-camp-form.html',
-  styleUrls: ['./create-camp-form.css']
+  styleUrls: ['./create-camp-form.css'],
 })
 export class CreateCampForm {
   private fb = inject(FormBuilder);
+  private campService = inject(CampService);
 
   // form structure
   campForm = this.fb.group({
-    // step 1: location
-    // explicit typed control so setValue accepts GeoJsonFeatureDto
-    location: this.fb.control<GeoJsonFeatureDto | null>(null, { nonNullable: false, validators: Validators.required }),
+    // step 1: location (required)
+    location: this.fb.control<GeoJsonFeatureDto | null>(null, { validators: Validators.required }),
 
     // step 2: delimitation
+    // zone hat einen required-Validator als Platzhalter
     delimitation: this.fb.group({
-      name: [''],
-      isCampDelimitation: [true],
-      color: ['#ff0000'],
-      // typed control for zone
-      zone: this.fb.control<GeoJsonFeatureDto | null>(null)
+      name: this.fb.control<string>('', { nonNullable: true }),
+      isCampDelimitation: this.fb.control<boolean>(true, { nonNullable: true }),
+      color: this.fb.control<string>('#ff0000', { nonNullable: true }),
+      zone: this.fb.control<GeoJsonFeatureDto | null>(
+        null,
+        { validators: Validators.required } // TODO: bei Bedarf Validator-Regeln anpassen
+      ),
     }),
 
     // step 3: rest
-    name: ['', Validators.required],
-    isSubCamp: [false],
-    parentId: [null],
-    subCamp: this.fb.array<string | number>([]),
-    campDetail: this.fb.group({
-      startDate: [null],
-      endDate: [null],
-      description: [''],
-      city: [''],
-      detailList: this.fb.array([])
+    name: this.fb.control<string>('', {
+      nonNullable: true,
+      validators: Validators.required,
     }),
-    shownMaps: [[]],
-    campZones: [[]]
+    isSubCamp: this.fb.control<boolean>(false, { nonNullable: true }),
+    parentId: this.fb.control<number | null>(null),
+
+    // FormArray für Subcamp-IDs (nummerische IDs)
+    subCamp: this.fb.array<FormControl<number | null>>([]),
+
+    campDetail: this.fb.group({
+      // Datepicker arbeitet mit Date | null
+      startDate: this.fb.control<Date | null>(null),
+      endDate: this.fb.control<Date | null>(null),
+      description: this.fb.control<string>('', { nonNullable: true }),
+      city: this.fb.control<string>('', { nonNullable: true }),
+      // Array von Detail-Gruppen
+      detailList: this.fb.array<FormGroup>([]),
+    }),
+
+    shownMaps: this.fb.control<any[] | null>(null),
+    campZones: this.fb.control<any[] | null>(null),
   });
 
+  // Getter für alle drei Steps (nicht‑null)
+  get locationControl(): AbstractControl {
+    return this.campForm.get('location') as AbstractControl;
+  }
+
+  get delimitationControl(): AbstractControl {
+    return this.campForm.get('delimitation') as AbstractControl;
+  }
+
+  get nameControl(): AbstractControl {
+    return this.campForm.get('name') as AbstractControl;
+  }
+
   // convenience getters
-  get detailList(): FormArray {
-    return this.campForm.get(['campDetail', 'detailList']) as FormArray;
-  }
-  get subCamp(): FormArray {
-    return this.campForm.get('subCamp') as FormArray;
+  get detailList(): FormArray<FormGroup> {
+    return this.campForm.get(['campDetail', 'detailList']) as FormArray<FormGroup>;
   }
 
-  // placeholder: open location picker (replace with real picker)
-  startLocationPicker(): void {
-    // TODO:.open map modal / component and set location control to selected GeoJsonFeatureDto
-    // Example placeholder value (Point)
-    const sample: GeoJsonFeatureDto = {
-      type: 'Feature',
-      geometry: { type: 'Point', coordinates: [7.44, 46.95] },
-      properties: {}
-    };
-    this.campForm.get('location')?.setValue(sample);
+  get subCamp(): FormArray<FormControl<number | null>> {
+    return this.campForm.get('subCamp') as FormArray<FormControl<number | null>>;
   }
 
-  // placeholder: start delimitation drawing
-  startDelimitationEditor(): void {
-    // TODO: open delimitation editor component and set delimitation.zone with resulting GeoJsonFeatureDto
-    const sampleZone: GeoJsonFeatureDto = {
-      type: 'Feature',
-      geometry: { type: 'Polygon', coordinates: [[[7.44,46.95],[7.441,46.95],[7.441,46.951],[7.44,46.95]]] },
-      properties: {}
-    };
-    // include isCampDelimitation because the FormGroup's typing requires it
-    this.campForm.get('delimitation')?.patchValue({
-      name: 'Delim',
-      isCampDelimitation: true,
-      zone: sampleZone,
-      color: '#ff0000'
-    });
+  get initialLocation(): GeoJsonFeatureDto | null {
+    return this.campForm.value.location ?? null;
+  }
+
+  onLocationPicked(location: GeoJsonFeatureDto): void {
+    this.campForm.get('location')?.setValue(location);
+    this.campForm.get('location')?.markAsDirty();
+    this.campForm.get('location')?.markAsTouched();
+  }
+
+  onLocationConfirmed(location: GeoJsonFeatureDto): void {
+    console.log('Location confirmed:', location);
+    this.campForm.get('location')?.setValue(location);
+  }
+
+  onLocationPickCanceled(): void {
+    // Optional: nichts tun, oder Dialog/Step zurück etc.
+    // this.campForm.get('location')?.reset();
+  }
+
+  onZonePicked(zone: GeoJsonFeatureDto): void {
+    this.campForm.get(['delimitation', 'zone'])?.setValue(zone);
+    this.campForm.get(['delimitation', 'zone'])?.markAsDirty();
+    this.campForm.get(['delimitation', 'zone'])?.markAsTouched();
+  }
+
+  onZonePickCanceled(): void {
+    // optional
   }
 
   addDetail() {
-    // use simple initial values (safer than array syntax inside group)
-    this.detailList.push(this.fb.group({ title: '', content: '' }));
+    const group = this.fb.group({
+      title: this.fb.control<string>('', { nonNullable: true }),
+      content: this.fb.control<string>('', { nonNullable: true }),
+    });
+
+    this.detailList.push(group);
   }
 
   removeDetail(index: number) {
@@ -106,7 +156,7 @@ export class CreateCampForm {
   }
 
   addSubCampId() {
-    this.subCamp.push(this.fb.control(null));
+    this.subCamp.push(this.fb.control<number | null>(null));
   }
 
   removeSubCamp(index: number) {
@@ -120,30 +170,100 @@ export class CreateCampForm {
       return;
     }
 
-    const v = this.campForm.value as Partial<CreateCampDto>;
+    const v = this.campForm.value;
 
+    // validate required fields
     if (!v.name || !v.location) {
-      console.error('Missing required fields', { name: v.name, location: v.location });
+      console.error('Missing required fields: name or location');
       return;
     }
 
-    const dto: CreateCampDto = {
-      name: v.name!,
-      location: v.location as GeoJsonFeatureDto,
-      delimitation: {
-        name: v.delimitation?.name ?? '',
-        isCampDelimitation: !!v.delimitation?.isCampDelimitation,
-        color: v.delimitation?.color ?? '#ff0000',
-        zone: v.delimitation?.zone as any
-      } as CampZoneDto,
-      campDetail: (v.campDetail ?? {}) as CampDetailDto,
-      isSubCamp: !!v.isSubCamp,
-      parentId: v.parentId ?? 0,
-      subCamp: v.subCamp ?? [],
-      shownMaps: v.shownMaps ?? null,
-      campZones: v.campZones ?? null
+    if (!v.delimitation?.zone) {
+      console.error('Missing required field: delimitation.zone');
+      return;
+    }
+
+    // build CampDetailDto
+    const campDetail: CampDetailDto = {
+      startDate: v.campDetail?.startDate
+        ? new Date(v.campDetail.startDate).toISOString()
+        : new Date().toISOString(),
+      endDate: v.campDetail?.endDate
+        ? new Date(v.campDetail.endDate).toISOString()
+        : new Date().toISOString(),
+      description: v.campDetail?.description ?? null,
+      city: v.campDetail?.city ?? '',
+      detailList:
+        v.campDetail?.detailList && v.campDetail.detailList.length > 0
+          ? v.campDetail.detailList.map((item: any) => ({
+              title: item.title ?? '',
+              content: item.content ?? '',
+            }))
+          : null,
     };
 
-    console.log('Submitting DTO', dto);
+    // build CampZoneDto (delimitation)
+    const delimitation: CampZoneDto = {
+      name: v.delimitation.name ?? '',
+      isCampDelimitation: v.delimitation.isCampDelimitation ?? true,
+      color: v.delimitation.color ?? '#FF0000',
+      zone: v.delimitation.zone as GeoJsonFeatureDto,
+    };
+
+    // build subCamp array (filter nulls/invalid)
+    const subCamp: number[] = (v.subCamp ?? []).filter(
+      (id): id is number => typeof id === 'number' && !isNaN(id)
+    );
+
+    // build shownMaps (optional)
+    const shownMaps: string[] | null = v.shownMaps && v.shownMaps.length > 0 ? v.shownMaps : null;
+
+    // build campZones (optional)
+    const campZones: CampZoneDto[] | null =
+      v.campZones && v.campZones.length > 0 ? v.campZones : null;
+
+    // assemble final CreateCampDto
+    const dto: CreateCampDto = {
+      name: v.name,
+      location: v.location as GeoJsonFeatureDto,
+      delimitation,
+      campDetail,
+      isSubCamp: v.isSubCamp ?? false,
+      parentId: v.parentId ?? 0,
+      subCamp,
+      shownMaps,
+      campZones,
+    };
+
+    console.log('CreateCampDto:', JSON.stringify(dto, null, 2));
+
+    // TODO: replace with actual service call
+    // this.campService.createCamp(dto).subscribe({
+    //   next: (response) => { console.log('Camp created', response); },
+    //   error: (err) => { console.error('Failed to create camp', err); }
+    // });
+  }
+
+  startDelimitationEditor(): void {
+    const sampleZone: GeoJsonFeatureDto = {
+      type: 'Feature',
+      geometry: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [7.444, 46.946],
+            [7.450, 46.946],
+            [7.450, 46.950],
+            [7.444, 46.950],
+            [7.444, 46.946]
+          ]
+        ]
+      },
+      properties: {}
+    };
+    this.campForm.get('delimitation.zone')?.setValue(sampleZone);
+    this.campForm.get('delimitation.name')?.setValue('Hauptlager');
+    this.campForm.get('delimitation.color')?.setValue('#FF0000');
+    this.campForm.get('delimitation.isCampDelimitation')?.setValue(true);
   }
 }

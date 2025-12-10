@@ -6,19 +6,18 @@
   <mat-card-content>
     <mat-horizontal-stepper linear #stepper>
       <!-- STEP 1: Location picker -->
-      <mat-step [stepControl]="campForm.get('location')">
+      <mat-step [stepControl]="locationControl">
         <ng-template matStepLabel>Location</ng-template>
 
         <div class="step-content">
           <p>Pick the camp location.</p>
-          <div class="placeholder">
-            <p>Location picker placeholder</p>
-            <button mat-raised-button color="primary" (click)="startLocationPicker()">Pick sample location</button>
-          </div>
-
-          <div class="location-preview" *ngIf="campForm.get('location')?.value as loc">
-            <pre>{{ loc | json }}</pre>
-          </div>
+          <!-- parent-form.component.html -->
+          <form [formGroup]="campForm">
+            <app-pick-location-map-view
+              [initialLocation]="campForm.value.location ?? null"
+              (locationConfirm)="onLocationConfirmed($event)">
+            </app-pick-location-map-view>
+          </form>
         </div>
 
         <div class="step-actions">
@@ -27,19 +26,22 @@
       </mat-step>
 
       <!-- STEP 2: Delimitation editor -->
-      <mat-step [stepControl]="campForm.get('delimitation')">
+      <mat-step [stepControl]="delimitationControl">
         <ng-template matStepLabel>Delimitation</ng-template>
 
         <div class="step-content">
           <p>Create camp delimitation.</p>
-          <div class="placeholder">
-            <p>Delimitation editor placeholder</p>
-            <button mat-raised-button color="primary" (click)="startDelimitationEditor()">Set sample delimitation</button>
-          </div>
 
-          <div class="delimitation-preview" *ngIf="campForm.get('delimitation')?.value as d">
+          <app-pick-zone-map-view
+            [initialZone]="campForm.get('delimitation.zone')?.value ?? null"
+            (zonePicked)="onZonePicked($event)">
+          </app-pick-zone-map-view>
+
+          @if (campForm.get('delimitation')?.value; as d) {
+          <div class="delimitation-preview">
             <pre>{{ d | json }}</pre>
           </div>
+          }
         </div>
 
         <div class="step-actions">
@@ -49,10 +51,10 @@
       </mat-step>
 
       <!-- STEP 3: Other details -->
-      <mat-step [stepControl]="campForm.get('name')">
+      <mat-step [stepControl]="nameControl">
         <ng-template matStepLabel>Details</ng-template>
 
-        <!-- note: bind the full form group here -->
+        <!-- Root FormGroup binden -->
         <form class="details-form" [formGroup]="campForm">
           <mat-form-field appearance="fill">
             <mat-label>Camp name</mat-label>
@@ -68,12 +70,16 @@
 
             <mat-form-field appearance="fill">
               <mat-label>Start Date</mat-label>
-              <input matInput formControlName="startDate" placeholder="YYYY-MM-DD" />
+              <input matInput [matDatepicker]="startPicker" formControlName="startDate" />
+              <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+              <mat-datepicker #startPicker></mat-datepicker>
             </mat-form-field>
 
             <mat-form-field appearance="fill">
               <mat-label>End Date</mat-label>
-              <input matInput formControlName="endDate" placeholder="YYYY-MM-DD" />
+              <input matInput [matDatepicker]="endPicker" formControlName="endDate" />
+              <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+              <mat-datepicker #endPicker></mat-datepicker>
             </mat-form-field>
 
             <mat-form-field appearance="fill">
@@ -86,26 +92,40 @@
 
           <div class="subcamp-list">
             <h4>Sub Camps (IDs)</h4>
-            <div *ngFor="let ctrl of subCamp.controls; let i = index" class="subcamp-row">
-              <input [formControl]="ctrl" placeholder="sub camp id" />
-              <button mat-icon-button color="warn" (click)="removeSubCamp(i)"><mat-icon>delete</mat-icon></button>
+
+            @for (ctrl of subCamp.controls; track $index; let i = $index) {
+            <div class="subcamp-row">
+              <input [formControl]="ctrl" type="number" placeholder="sub camp id" />
+              <button mat-icon-button color="warn" (click)="removeSubCamp(i)">
+                <mat-icon>delete</mat-icon>
+              </button>
             </div>
+            }
+
             <button mat-button (click)="addSubCampId()">Add SubCamp ID</button>
           </div>
 
           <div class="detail-list">
             <h4>Detail list</h4>
-            <div *ngFor="let item of detailList.controls; let i = index" [formGroup]="item" class="detail-row">
+
+            @for (item of detailList.controls; track $index; let i = $index) {
+            <div [formGroup]="item" class="detail-row">
               <mat-form-field appearance="fill">
                 <mat-label>Title</mat-label>
                 <input matInput formControlName="title" />
               </mat-form-field>
+
               <mat-form-field appearance="fill">
                 <mat-label>Content</mat-label>
                 <input matInput formControlName="content" />
               </mat-form-field>
-              <button mat-icon-button color="warn" (click)="removeDetail(i)"><mat-icon>delete</mat-icon></button>
+
+              <button mat-icon-button color="warn" (click)="removeDetail(i)">
+                <mat-icon>delete</mat-icon>
+              </button>
             </div>
+            }
+
             <button mat-button (click)="addDetail()">Add detail</button>
           </div>
         </form>
