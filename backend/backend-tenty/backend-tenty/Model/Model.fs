@@ -270,6 +270,16 @@ type CreateCampDto = {
     CampZones: CampZoneDto list option
 }
 
+type UpdateCampDto = {
+    Name: string
+    Location: GeoJsonFeatureDto
+    Delimitation: CampZoneDto
+    CampDetail: CampDetailDto
+    IsSubCamp: bool
+    ParentId: int
+    
+}
+
 
 type NewDbUserDto = {
     FirstName: string
@@ -362,12 +372,152 @@ type DbRefreshToken = {
 
 type RefreshTokenDTO = {
     Token: string
-}   
+} 
   
+// Types for Features:
+type FeatureKind =
+    | Tent
+    | Toilet
+    | Power
+    | Water
+    | Gate
+    | Custom
 
+type FeatureDetail = {
+    Id: int
+    FeatureId: int
+    Title: String50
+    Content: string
+    CreatedAt: DateTimeOffset option
+    UpdatedAt: DateTimeOffset option
+}
 
+type Feature = {
+    Id: int
+    CampId: int
+    Kind: FeatureKind
+    Name: String50 option
+    Geometry: GeoJsonFeature
+    HeadingDeg: double option
+    LengthM: double option
+    WidthM: double option
+    Color: Color option
+    Icon: String50 option
+    Props: string option
+    Details: FeatureDetail list option
+    CreatedAt: DateTimeOffset option
+    UpdatedAt: DateTimeOffset option
+}
+
+type DbFeature = {
+    Id: int
+    CampId: int
+    Kind: string
+    Name: string option
+    Geometry: string
+    HeadingDeg: double option
+    LengthM: double option
+    WidthM: double option
+    Color: string option
+    Icon: string option
+    Props: string option
+    CreatedAt: DateTimeOffset option
+    UpdatedAt: DateTimeOffset option
+}
+
+type DbFeatureDetail = {
+    Id: int
+    FeatureId: int
+    Title: string
+    Content: string
+    CreatedAt: DateTimeOffset option
+    UpdatedAt: DateTimeOffset option
+}
+
+type FeatureDetailDto = {
+    Id: int
+    Title: string
+    Content: string
+    CreatedAt: DateTimeOffset option
+    UpdatedAt: DateTimeOffset option
+}
+
+type FeatureDto = {
+    Id: int
+    CampId: int
+    Kind: string
+    Name: string option
+    Geometry: GeoJsonFeatureDto
+    HeadingDeg: double option
+    LengthM: double option
+    WidthM: double option
+    Color: string option
+    Icon: string option
+    Props: string option
+    Details: FeatureDetailDto list option
+    CreatedAt: DateTimeOffset option
+    UpdatedAt: DateTimeOffset option
+}
+
+type CreateFeatureDto = {
+    CampId: int
+    Kind: string
+    Name: string option
+    Geometry: GeoJsonFeatureDto
+    HeadingDeg: double option
+    LengthM: double option
+    WidthM: double option
+    Color: string option
+    Icon: string option
+    Props: string option
+    Details: FeatureDetailDto list option
+}
+
+type NewDbFeatureDto = {
+    CampId: int
+    Kind: string
+    Name: string option
+    Geometry: string
+    HeadingDeg: double option
+    LengthM: double option
+    WidthM: double option
+    Color: string option
+    Icon: string option
+    Props: string option
+}
+
+type NewDbFeatureDetailDto = {
+    FeatureId: int
+    Title: string
+    Content: string
+}
 
 //helpers
 let string50Value (s: String50) = String50.value s
 let string50ValueOpt (opt: String50 option) : string option = Option.map String50.value opt
 let mailAddressToString (m: MailAddress) = m.Address
+
+let featureKindToString (kind: FeatureKind) : string =
+    match kind with
+    | FeatureKind.Tent -> "tent"
+    | FeatureKind.Toilet -> "toilet"
+    | FeatureKind.Power -> "power"
+    | FeatureKind.Water -> "water"
+    | FeatureKind.Gate -> "gate"
+    | FeatureKind.Custom -> "custom"
+
+let featureKindFromString (kind: string) : Result<FeatureKind, string> =
+    match kind.ToLowerInvariant() with
+    | "tent" -> Ok FeatureKind.Tent
+    | "toilet" -> Ok FeatureKind.Toilet
+    | "power" -> Ok FeatureKind.Power
+    | "water" -> Ok FeatureKind.Water
+    | "gate" -> Ok FeatureKind.Gate
+    | "custom" -> Ok FeatureKind.Custom
+    | other -> Error $"Unknown feature kind: {other}"
+
+let jsonElementToString (element: System.Text.Json.JsonElement) : string =
+    System.Text.Json.JsonSerializer.Serialize(element)
+
+let jsonElementToStringOption (element: System.Text.Json.JsonElement option) : string option =
+    element |> Option.map jsonElementToString
