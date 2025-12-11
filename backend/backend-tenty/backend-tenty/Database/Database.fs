@@ -772,6 +772,35 @@ let getFeatureById (featureId: int) : Task<Result<DbFeature, string>> = task {
     | ex -> return Error $"Database error: {ex.Message}"
 }
 
+/// Updates a Feature
+let updateDbFeatureDetail (dto: DbFeatureDetail) : Task<Result<int, string>> = task {
+    try
+        let! affected =
+            connectionString
+            |> Sql.connect
+            |> Sql.query "
+                UPDATE tenty.feature_details
+                SET feature_id = @feature_id,
+                    title      = @title,
+                    content    = @content
+                WHERE id = @id"
+            |> Sql.parameters [
+                "@feature_id", Sql.int dto.FeatureId
+                "@title",      Sql.string dto.Title
+                "@content",    Sql.text dto.Content
+                "@id",         Sql.int dto.Id
+            ]
+            |> Sql.executeNonQueryAsync
+
+        return
+            match affected with
+            | 0 -> Error $"FeatureDetail with id {dto.Id} not found"
+            | n -> Ok n
+    with
+    | ex -> return Error $"Database error: {ex.Message}"
+}
+
+
 /// Retrieves detail records attached to a feature.
 let getFeatureDetails (featureId: int) : Task<Result<DbFeatureDetail list, string>> = task {
     try
@@ -877,6 +906,8 @@ let updateDbFeature (dto: DbFeature) : Task<Result<int, string>> = task {
     with
     | ex -> return Error $"Database error: {ex.Message}"
 }
+
+
 
 /// Deletes all detail rows for the specified feature.
 let deleteFeatureDetails (featureId: int) : Task<Result<int, string>> = task {

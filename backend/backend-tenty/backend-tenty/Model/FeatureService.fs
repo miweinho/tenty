@@ -260,48 +260,43 @@ let deleteFeature (featureId: int) : Task<Result<unit, FeatureError>> =
     
 let updateFeature (featureId: int) (dto: FeatureDto) : Task<Result<Feature, FeatureError>> =
     taskResult {
-        // 1. Existenz-Check, damit wir bei nicht vorhandener ID ein FeatureNotFound zurückgeben
+        // 1. Existenz-Check
         let! _ =
             task {
-                let! dbFeature = backend_tenty.Database.getFeatureById featureId
+                let! dbFeature = getFeatureById featureId
                 return mapDbResultToFeatureError featureId dbFeature
             }
 
-        // 2. Eingehende Daten validieren & Domain-Objekt bauen
+        // 2. Domain-Feature mit bestehender Id bauen
         let! feature =
             validateAndBuildUpdatedFeature featureId dto
             |> Task.FromResult
 
-        // 3. Haupt-Feature in der DB aktualisieren
-        //
-        // HINWEIS:
-        // - domainFeatureToExistingDb und updateFeature sind hier exemplarische Namen.
-        //   Passe sie an deine tatsächlichen DB-/Conversion-Funktionen an.
+        // 3. In DbFeature (mit Id) konvertieren und updaten
         let! affected =
             feature
-            |> domainFeatureToDb
-            |> updateDbFeature
+            |> domainFeatureToDb          // wichtig: Variante mit Id
+            |> updateDbFeature            // kein Insert, sondern echtes UPDATE
             |> mapTaskError FeatureError.DbError
 
-        // Falls in der DB nichts geändert wurde -> so behandeln wir es als "nicht gefunden"
         match affected with
-        | 0 -> return! Error (FeatureError.FeatureNotFound featureId)
-        | _ -> 
+        | 0 ->
+            // nichts geändert -> wie "nicht gefunden"
+            return! Error (FeatureError.FeatureNotFound featureId)
+        | _ ->
+            // 4. Details ersetzen
+            let! _ = deleteFeatureDetails featureId |> mapTaskError FeatureError.DbError
 
-        // 4. Feature-Details ersetzen:
-        //    - alte Details löschen
-        //    - neue Details (aus dto.Details) einfügen
-        let! _ = deleteFeatureDetails featureId |> mapTaskError FeatureError.DbError
+            match feature.Details with
+            | Some details ->
+                for detail in details do
+                    let detailWithFeature = { detail with FeatureId = featureId }
+                    let dbDetail = featureDetailToNewDb featureId detailWithFeature
+                    let! _ = addNewFeatureDetail dbDetail |> mapTaskError FeatureError.DbError
+                    ()
+            | None -> ()
 
-        match feature.Details with
-        | Some details ->
-            for detail in details do
-                let detailWithFeature = { detail with FeatureId = featureId }
-                let dbDetail = featureDetailToNewDb featureId detailWithFeature
-                let! _ = addNewFeatureDetail dbDetail |> mapTaskError FeatureError.DbError
-                ()
-        | None -> ()
-
-        // 5. Aktualisiertes Feature inkl. Details zurückladen und zurückgeben
-        return! loadFeatureWithDetails featureId
+            // 5. aktualisiertes Feature zurückladen
+            return! loadFeatureWithDetails featureId
     }
+

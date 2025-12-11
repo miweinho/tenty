@@ -1,4 +1,3 @@
-﻿// language: fsharp
 ﻿/// Conversions between domain models and API DTOs.
 module backend_tenty.Model.Conversion.DTOConversion
 

@@ -82,3 +82,64 @@ type public FeatureController(logger: ILogger<FeatureController>) =
                     logger.LogError("Error while creating feature for camp {CampId}: {Error}", featureDto.CampId, appErr)
                     return ActionResult<FeatureDto>(this.BadRequest "Error while creating feature.")
         }
+        
+
+    [<HttpPut("{id}")>]
+    [<Authorize>]
+    member this.UpdateFeature(id: int, dto: FeatureDto) : Task<ActionResult<FeatureDto>> =
+        task {
+            // 1. Erst das aktuelle Feature laden, um CampId für Permission zu haben
+            let! currentResult = getFeatureByIdWithDetails id
+
+            match currentResult |> mapFeatureResult with
+            | Error appErr ->
+                logger.LogError("Error while loading feature {FeatureId} for update: {Error}", id, appErr)
+                return ActionResult<FeatureDto>(this.BadRequest("Error while loading feature for update."))
+            | Ok currentFeature ->
+                // 2. Permission auf Camp prüfen (wie bei GetFeature/CreateFeature)
+                match checkClaimForPermission (this.HttpContext.User.FindFirst("camp_roles")) currentFeature.CampId Write with
+                | Error e ->
+                    logger.LogError("Error while parsing permission claim: {Error}", e)
+                    return ActionResult<FeatureDto>(this.Unauthorized("Unauthorized"))
+                | Ok _ ->
+                    // 3. Feature aktualisieren
+                    let! updateResult = updateFeature id dto
+
+                    match updateResult |> mapFeatureResult with
+                    | Ok updatedFeature ->
+                        return ActionResult<FeatureDto>(featureToDto updatedFeature)
+                    | Error appErr ->
+                        logger.LogError("Error while updating feature {FeatureId}: {Error}", id, appErr)
+                        return ActionResult<FeatureDto>(this.BadRequest("Error while updating feature."))
+        }
+
+        
+    [<HttpDelete("{id}")>]
+    [<Authorize>]
+    member this.DeleteFeature(id: int) : Task<IActionResult> =
+        task {
+            // 1. Feature (inkl. Details) laden, um CampId zu kennen
+            let! featureResult = getFeatureByIdWithDetails id
+
+            match featureResult |> mapFeatureResult with
+            | Error appErr ->
+                logger.LogError("Error while loading feature {FeatureId} for delete: {Error}", id, appErr)
+                return this.BadRequest("Error while loading feature for delete.") :> IActionResult
+            | Ok feature ->
+                // 2. Schreib\-Berechtigung auf das Camp prüfen
+                match checkClaimForPermission (this.HttpContext.User.FindFirst("camp_roles")) feature.CampId Write with
+                | Error e ->
+                    logger.LogError("Error while parsing permission claim: {Error}", e)
+                    return this.BadRequest("Unauthorized") :> IActionResult
+                | Ok _ ->
+                    // 3. Löschen über Service
+                    let! deleteResult = deleteFeature id
+
+                    match deleteResult with
+                    | Ok () ->
+                        // Erfolgreich gelöscht
+                        return this.NoContent() :> IActionResult
+                    | Error fe ->
+                        logger.LogError("Error while deleting feature {FeatureId}: {Error}", id, fe)
+                        return this.handleFeatureError fe "Error while deleting feature."
+        }

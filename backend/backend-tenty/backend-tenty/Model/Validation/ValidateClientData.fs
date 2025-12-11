@@ -40,10 +40,17 @@ let private geometryInSwitzerland (geometry: Geometry ) =
     | Point p ->
         if posInSwitzerland p then Ok geometry
         else Error $"Point is outside of Switzerland: {p.lat}, {p.lon}"
-    | Polygon p ->
-        match checkRings p with
+
+    | LineString points ->
+        match checkRing points with
         | Ok () -> Ok geometry
         | Error e -> Error e
+
+    | Polygon rings ->
+        match checkRings rings with
+        | Ok () -> Ok geometry
+        | Error e -> Error e
+
 
 /// Validates a GeoJSON feature location by converting it to domain geometry and checking its bounds.
 let validateGeoJsonFeatureLocation (location: GeoJsonFeatureDto) : Result<GeoJsonFeatureDto, string> =

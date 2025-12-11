@@ -50,7 +50,7 @@ type public UserController(logger: ILogger<UserController>, tokenCfg: TokenConfi
                      | Error e ->
                          logger.LogError("Error while parsing Domain User {e}", e)
                          return this.BadRequest("Error while logging in.") :> ActionResult
-                    | Ok user ->
+                     | Ok user ->
                         let! newToken = generateTokenForUser tokenCfg user
                         match newToken with
                         | Error e ->
