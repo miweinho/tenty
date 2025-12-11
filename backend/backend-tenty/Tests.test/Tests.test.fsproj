@@ -15,6 +15,7 @@
     <ItemGroup>
         <Compile Include="Model\Validation\ValidationDbData.fs" />
         <Compile Include="Model\Validation\ValidationClientData.fs" />
+        <Compile Include="Model\GeoJson\GeoJsonServiceTests.fs" />
     </ItemGroup>
 
     <ItemGroup>

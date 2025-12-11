@@ -7,6 +7,7 @@ open System.Globalization
 open System.Text.Json
 open System.Text.Json.Serialization
 open Giraffe
+open System.Text.RegularExpressions
 
 /// Represents a geographic coordinate with longitude/latitude precision.
 type Position = {
@@ -371,7 +372,9 @@ let geometryFromWkt (wkt: string) : Geometry =
             else
                 contentTrim
 
-        let ringsText = inner.Split([| ")(" |], StringSplitOptions.None)
+        // Split rings on the sequence ") , (" allowing optional whitespace to support outputs
+        // like "(a,b),(c,d)" produced by geometryToWkt and variants with spaces
+        let ringsText = Regex.Split(inner, @"\)\s*,\s*\(")
 
         let rings =
             ringsText
@@ -450,7 +453,6 @@ let deserializeFeatureFromJson (json: string) : GeoJsonFeature =
         JsonSerializer.Deserialize<GeoJsonFeatureDto>(json, jsonOptions)
         |> Option.ofObj
         |> Option.defaultWith (fun () -> failwith "Invalid GeoJSON: cannot deserialize Feature")
-    Console.WriteLine(dto)
     featureFromDto dto
 
 /// Serialize domain FeatureCollection → GeoJSON string
@@ -495,7 +497,7 @@ let serializeGeometryToWkt (g: Geometry) : string =
 let featureToDbWkt (feature: GeoJsonFeature) : string =
     serializeGeometryToWkt feature.geometry
     
-/// Converts a GeoJSON feature DTO into a database-ready WKT string.
+/// Con  verts a GeoJSON feature DTO into a database-ready WKT string.
 let featureDtoToDbWkt (feature: GeoJsonFeatureDto) : string =
     featureFromDto feature
     |> featureToDbWkt
