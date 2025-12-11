@@ -1,0 +1,11 @@
+.camp-main-map-view {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.camp-main-map-view app-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

@@ -1,14 +1,14 @@
-.pick-delimitation-container {
+.pick-location-container {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 400px;
 }
 
 .map-wrapper {
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  overflow: hidden;
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 350px;
+  position: relative;
 }
 
 .map-wrapper app-map {
@@ -17,23 +17,31 @@
   height: 100%;
 }
 
-.pick-delimitation-toolbar {
+.overlay-controls {
+  position: absolute;
+  left: 5%;
+  bottom: 20%;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 5;
+  width: auto;
+}
+
+.pick-zone-toolbar {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-}
-
-.pick-zone-container {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.pick-zone-toolbar {
-  gap: 8px;
+  width: fit-content;
+  pointer-events: all;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  padding: 4px 8px;
 }
 
 .spacer {
-  flex: 1;
+  flex: 1 1 auto;
 }

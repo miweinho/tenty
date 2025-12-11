@@ -4,7 +4,7 @@ import { LoginPage } from './components/pages/login-page/login-page';
 import { Overlay } from './components/pages/overlay/overlay';
 import { Home } from './components/pages/home/home';
 import { CreateCampForm } from './components/forms/create-camp-form/create-camp-form';
-import { Camp } from './components/pages/camp/camp';
+import { MainCampViewComponent } from './components/pages/camp/main-camp-view/main-camp-view';
 
 export const routes: Routes = [
     {path: 'login', component: LoginPage, //canDeactivate: [loginRedirctGuard]
@@ -13,7 +13,7 @@ export const routes: Routes = [
         children: [
             {path: 'home', component: Home},
             {path: 'create-camp', component: CreateCampForm},
-            {path: 'camp/:id', component: Camp }
+            {path: 'camp/:id', component: MainCampViewComponent },
 
         ]
     }

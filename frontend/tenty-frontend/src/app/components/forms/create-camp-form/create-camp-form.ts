@@ -1,4 +1,5 @@
 import { Component, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import {
   FormBuilder,
   FormArray,
@@ -19,7 +20,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { CommonModule } from '@angular/common';
 import { MatInputModule } from '@angular/material/input';
-import { CampService } from '../../../service/camp';
+import { CampService } from '../../../service/camps/camp';
 import { PickLocationMapViewComponent } from '../../maps/pick-location-map-view/pick-location-map-view';
 import { PickZoneMapView } from '../../maps/pick-zone-map-view/pick-zone-map-view';
 
@@ -47,6 +48,11 @@ import { PickZoneMapView } from '../../maps/pick-zone-map-view/pick-zone-map-vie
 export class CreateCampForm {
   private fb = inject(FormBuilder);
   private campService = inject(CampService);
+  private router = inject(Router);
+
+  isSubmitting = false; // Loading-State
+  //
+  mode = "campDelimitation";
 
   // form structure
   campForm = this.fb.group({
@@ -116,6 +122,17 @@ export class CreateCampForm {
     return this.campForm.value.location ?? null;
   }
 
+  get initialZone(): Partial<CampZoneDto> | null {
+    const zone = this.campForm.get('delimitation.zone')?.value;
+    if (!zone) return null;
+    return {
+      zone,
+      name: this.campForm.get('delimitation.name')?.value ?? 'Camp Delimitation',
+      color: this.campForm.get('delimitation.color')?.value ?? '#ff0000',
+      isCampDelimitation: this.campForm.get('delimitation.isCampDelimitation')?.value ?? true,
+    };
+  }
+
   onLocationPicked(location: GeoJsonFeatureDto): void {
     this.campForm.get('location')?.setValue(location);
     this.campForm.get('location')?.markAsDirty();
@@ -123,8 +140,8 @@ export class CreateCampForm {
   }
 
   onLocationConfirmed(location: GeoJsonFeatureDto): void {
-    console.log('Location confirmed:', location);
     this.campForm.get('location')?.setValue(location);
+    console.log("location confirmed", this.campForm.get('location')?.value);
   }
 
   onLocationPickCanceled(): void {
@@ -132,10 +149,15 @@ export class CreateCampForm {
     // this.campForm.get('location')?.reset();
   }
 
-  onZonePicked(zone: GeoJsonFeatureDto): void {
-    this.campForm.get(['delimitation', 'zone'])?.setValue(zone);
-    this.campForm.get(['delimitation', 'zone'])?.markAsDirty();
-    this.campForm.get(['delimitation', 'zone'])?.markAsTouched();
+  onZonePicked(zoneDto: CampZoneDto): void {
+    this.campForm.patchValue({
+      delimitation: {
+        zone: zoneDto.zone,
+        name: zoneDto.name,
+        color: zoneDto.color,
+        isCampDelimitation: zoneDto.isCampDelimitation
+      }
+    });
   }
 
   onZonePickCanceled(): void {
@@ -167,6 +189,7 @@ export class CreateCampForm {
   submit(): void {
     if (this.campForm.invalid) {
       this.campForm.markAllAsTouched();
+      alert('Please fill all required fields');
       return;
     }
 
@@ -174,12 +197,12 @@ export class CreateCampForm {
 
     // validate required fields
     if (!v.name || !v.location) {
-      console.error('Missing required fields: name or location');
+      alert('Missing required fields: name or location');
       return;
     }
 
     if (!v.delimitation?.zone) {
-      console.error('Missing required field: delimitation.zone');
+      alert('Missing required field: delimitation zone');
       return;
     }
 
@@ -235,13 +258,24 @@ export class CreateCampForm {
       campZones,
     };
 
-    console.log('CreateCampDto:', JSON.stringify(dto, null, 2));
+    console.log('Sending CreateCampDto:', JSON.stringify(dto, null, 2));
 
-    // TODO: replace with actual service call
-    // this.campService.createCamp(dto).subscribe({
-    //   next: (response) => { console.log('Camp created', response); },
-    //   error: (err) => { console.error('Failed to create camp', err); }
-    // });
+    // Backend-Call
+    this.isSubmitting = true;
+    this.campService.createCamp(dto).subscribe({
+      next: (createdCamp) => {
+        console.log('Camp created successfully:', createdCamp);
+        this.isSubmitting = false;
+        // Navigate to home or camp detail
+        this.router.navigate([`camp/${createdCamp.id}`]);
+      },
+      error: (err) => {
+        console.error('Failed to create camp:', err);
+        this.isSubmitting = false;
+        const errorMsg = err.error?.message || err.message || 'Unknown error';
+        alert(`Error creating camp: ${errorMsg}`);
+      }
+    });
   }
 
   startDelimitationEditor(): void {

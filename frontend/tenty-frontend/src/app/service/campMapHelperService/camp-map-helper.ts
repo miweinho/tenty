@@ -71,7 +71,10 @@ export class CampMapHelperService {
    * Polygon-Features für alle Camp-Zonen.
    */
   createZoneFeaturesFromCamp(camp: FullCampDto): Feature<Polygon>[] {
-    return (camp.campZones ?? []).map((zone: CampZoneDto) => {
+  return (camp.campZones ?? [])
+    .map((zone: CampZoneDto) => {
+      if (!zone.zone) return undefined;
+
       const feature = this.featureFromDto(zone.zone, {
         campId: camp.id,
         zoneName: zone.name,
@@ -81,8 +84,9 @@ export class CampMapHelperService {
 
       feature.setStyle(this.createCampZoneStyle(zone.color));
       return feature;
-    });
-  }
+    })
+    .filter((feature): feature is Feature<Polygon> => feature !== undefined);
+}
 
   // ---------------------------------------------------
   // OL Feature -> GeoJSON DTO
@@ -159,3 +163,4 @@ export class CampMapHelperService {
     });
   }
 }
+

@@ -1,13 +1,14 @@
-// src/app/components/camp-map/pick-location-map-view.component.ts
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ChangeDetectorRef, NgZone, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import Map from 'ol/Map';
 import Feature from 'ol/Feature';
 import { Point } from 'ol/geom';
+import { unByKey } from 'ol/Observable';
 
 import { MapComponent } from '../../pages/map/map';
 import { BaseCampMapView } from '../../pages/mapview/base-camp-map-view';
 import { GeoJsonFeatureDto } from '../../../models';
+import { DrawingService } from '../../../service/drawingService/drawing-service';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -15,6 +16,8 @@ import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-pick-location-map-view',
+  standalone: true,
+  providers: [DrawingService],
   imports: [
     CommonModule,
     MapComponent,
@@ -25,43 +28,34 @@ import { MatIconModule } from '@angular/material/icon';
   templateUrl: './pick-location-map-view.html',
   styleUrls: ['./pick-location-map-view.css'],
 })
-export class PickLocationMapViewComponent extends BaseCampMapView {
-  /**
-   * Optional: initial location (e.g. when editing an existing camp).
-   */
+export class PickLocationMapViewComponent extends BaseCampMapView implements OnInit {
+  private cdr = inject(ChangeDetectorRef);
+  private ngZone = inject(NgZone);
+
   @Input() initialLocation: GeoJsonFeatureDto | null = null;
 
-  /**
-   * Emits the picked location as GeoJSON Feature when user confirms.
-   */
   @Output() locationConfirm = new EventEmitter<GeoJsonFeatureDto>();
-
-  /**
-   * Emits when the user cancels the picking (optional).
-   */
   @Output() cancel = new EventEmitter<void>();
 
   private selectedFeature: Feature<Point> | null = null;
   private isPicking = false;
+  private clickKey: any = null;
+
+  ngOnInit(): void {
+    this.isPicking = false;
+  }
 
   protected override afterMapInitialized(_map: Map): void {
     this.map = _map;
-    // Beim Laden: alte Features wegräumen
     this.drawingService.clearAll();
 
-    // Falls ein initialer Standort vorhanden ist -> einzeichnen
     if (this.initialLocation) {
       const feature = this.campMapHelper.featureFromDto(
         this.initialLocation,
         { kind: 'picked-location' }
       ) as Feature<Point>;
-
-      // Einfach denselben Style wie Default verwenden oder hier speziellen Marker setzen
-      // (optional könntest du einen eigenen Marker-Style dafür definieren)
       this.drawingService.addFeature(feature);
       this.selectedFeature = feature;
-
-      // Auf den Punkt zoomen
       this.fitViewToAllFeatures();
     }
   }
@@ -74,48 +68,39 @@ export class PickLocationMapViewComponent extends BaseCampMapView {
     return this.isPicking;
   }
 
-  /**
-   * Startet den "Standort wählen"-Modus:
-   * Der nächste Klick auf die Karte erzeugt genau EIN Point-Feature
-   * über den DrawingService.
-   */
   async startPickingLocation(): Promise<void> {
-    
     if (!this.map) return;
-    console.log("start picking locaiton");
 
-    this.isPicking = true;
+    this.ngZone.run(() => {
+      this.isPicking = true;
+      this.cdr.markForCheck();
+    });
 
-    // Vorherige Auswahl entfernen
     if (this.selectedFeature) {
       this.drawingService.removeFeature(this.selectedFeature);
       this.selectedFeature = null;
     }
 
-    // Wir verwenden den DrawingService, um den Punkt zu setzen.
-    // Variante 1: existierende API waitForClickAndCreatePoint()
-    const feature = await this.drawingService.waitForClickAndCreatePoint();
-
-    this.isPicking = false;
-
-    if (!feature) {
-      return;
+    if (this.clickKey) {
+      unByKey(this.clickKey);
+      this.clickKey = null;
     }
 
-    // Nur als Point verwenden
-    this.selectedFeature = feature as Feature<Point>;
+    this.clickKey = this.map.once('singleclick', (evt) => {
+      const feature = new Feature(new Point(evt.coordinate));
+      this.drawingService.addFeature(feature);
 
-    // Optional: etwas reinzoomen / zentrieren
-    this.fitViewToAllFeatures();
+      this.ngZone.run(() => {
+        this.isPicking = false;
+        this.selectedFeature = feature as Feature<Point>;
+        this.fitViewToAllFeatures();
+        this.cdr.markForCheck();
+      });
+    });
   }
 
-  /**
-   * User klickt auf "Standort übernehmen".
-   * -> GeoJSON-DTO erzeugen und an Parent emittieren.
-   */
   confirmSelection(): void {
     if (!this.selectedFeature) return;
-
     const dto = this.campMapHelper.dtoFromPointFeature(this.selectedFeature);
     this.locationConfirm.emit(dto);
   }

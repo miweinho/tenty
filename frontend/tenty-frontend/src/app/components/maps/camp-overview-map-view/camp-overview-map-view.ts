@@ -5,7 +5,7 @@ import Feature from 'ol/Feature';
 import Geometry from 'ol/geom/Geometry';
 import { MapComponent } from '../../pages/map/map';
 import { BaseCampMapView } from '../../pages/mapview/base-camp-map-view';
-import { CampService } from '../../../service/camp';
+import { CampService } from '../../../service/camps/camp';
 import { CampDto } from '../../../models';
 import { Subject, takeUntil } from 'rxjs';
 

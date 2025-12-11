@@ -7,7 +7,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
-import { CampService } from '../../../service/camp';
+import { CampService } from '../../../service/camps/camp';
 import { Router } from '@angular/router';
 import { CampDto } from '../../../models';
 

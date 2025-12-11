@@ -25,10 +25,10 @@ export interface CampUserDto {
 }
 
 export interface CampZoneDto {
+  zone: GeoJsonFeatureDto | null;  // ← muss nullable sein
   name: string;
+  color: string;
   isCampDelimitation: boolean;
-  color: string; // hex string
-  zone: GeoJsonFeatureDto;
 }
 
 export interface DetailListEntryDto {
@@ -64,6 +64,7 @@ export interface FullCampDto {
   delimitation: CampZoneDto;
   campDetail: CampDetailDto;
   isSubCamp: boolean;
+  parentId?: number | null;
   subCamp: number[]; // child camp ids
   shownMaps: string[];
   campZones: CampZoneDto[];
@@ -79,6 +80,15 @@ export interface CreateCampDto {
   subCamp: number[];
   shownMaps?: string[] | null;
   campZones?: CampZoneDto[] | null;
+}
+
+export interface UpdateCampDto {
+  name: string;
+  location: GeoJsonFeatureDto;
+  delimitation: CampZoneDto;
+  campDetail: CampDetailDto;
+  isSubCamp: boolean;
+  parentId: number;
 }
 
 // New / DB insert DTOs
@@ -180,7 +190,7 @@ export type DrawType = 'Point' | 'LineString' | 'Polygon' | 'Circle';
 
 //Models for features:
 
-export type FeatureKind = 'tent' | 'toilet' | 'power' | 'water' | 'gate' | 'custom';
+export type FeatureKind = 'tent' | 'water';
 
 export interface FeatureDetailDto {
   id: number;

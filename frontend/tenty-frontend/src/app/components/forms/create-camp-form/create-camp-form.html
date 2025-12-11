@@ -14,7 +14,7 @@
           <!-- parent-form.component.html -->
           <form [formGroup]="campForm">
             <app-pick-location-map-view
-              [initialLocation]="campForm.value.location ?? null"
+              [initialLocation]="campForm.get('location')?.value ?? null"
               (locationConfirm)="onLocationConfirmed($event)">
             </app-pick-location-map-view>
           </form>
@@ -25,7 +25,7 @@
         </div>
       </mat-step>
 
-      <!-- STEP 2: Delimitation editor -->
+      <!-- STEP 2: Delimitation -->
       <mat-step [stepControl]="delimitationControl">
         <ng-template matStepLabel>Delimitation</ng-template>
 
@@ -33,15 +33,10 @@
           <p>Create camp delimitation.</p>
 
           <app-pick-zone-map-view
-            [initialZone]="campForm.get('delimitation.zone')?.value ?? null"
+            [location]="campForm.get('location')?.value ?? null"
+            [initialZone]="initialZone"
             (zonePicked)="onZonePicked($event)">
           </app-pick-zone-map-view>
-
-          @if (campForm.get('delimitation')?.value; as d) {
-          <div class="delimitation-preview">
-            <pre>{{ d | json }}</pre>
-          </div>
-          }
         </div>
 
         <div class="step-actions">
