@@ -7,15 +7,19 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["backend-tenty/backend-tenty.fsproj", "backend-tenty/"]
-RUN dotnet restore "backend-tenty/backend-tenty.fsproj"
+
+# Copy project file and restore dependencies
+COPY backend-tenty/*.fsproj ./backend-tenty/
+RUN dotnet restore "./backend-tenty/backend-tenty.fsproj"
+
+# Copy everything else and build
 COPY . .
 WORKDIR "/src/backend-tenty"
-RUN dotnet build "./backend-tenty.fsproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "backend-tenty.fsproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./backend-tenty.fsproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "backend-tenty.fsproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app

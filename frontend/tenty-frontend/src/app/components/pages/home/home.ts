@@ -29,12 +29,10 @@ export class Home implements OnInit {
 
     onCampSelect(camp: CampDto): void {
     console.log('Camp selected:', camp);
-    // TODO: navigate to camp detail page or emit event
-    // this.router.navigate(['/camps', camp.id]);
+    this.router.navigate(['/camp/', camp.id]);
   }
 
   onMapCampSelected(camp: CampDto): void {
-    console.log("onmapCampselected: ");
     this.onCampSelect(camp);
   }
 }

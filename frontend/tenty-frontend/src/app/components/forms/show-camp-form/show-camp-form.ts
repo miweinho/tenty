@@ -55,6 +55,7 @@ import { PickZoneMapView } from '../../maps/pick-zone-map-view/pick-zone-map-vie
 export class ShowCampFormComponent implements OnChanges {
   @Input() camp: FullCampDto | null = null;
   @Output() saved = new EventEmitter<FullCampDto>();
+  @Output() closed = new EventEmitter<void>();
 
   private fb = inject(FormBuilder);
   private campService = inject(CampService);
@@ -142,6 +143,10 @@ export class ShowCampFormComponent implements OnChanges {
     this.campForm.get(['delimitation', 'color'])?.setValue(color);
     this.campForm.get(['delimitation', 'zone'])?.markAsDirty();
     this.campForm.get(['delimitation', 'zone'])?.markAsTouched();
+  }
+
+  onClose(): void {
+    this.closed.emit();
   }
 
   submit(): void {

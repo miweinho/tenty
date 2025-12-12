@@ -47,7 +47,11 @@
             </button>
           </mat-toolbar>
           <div class="popup-body form">
-            <app-show-camp-form [camp]="camp" (saved)="loadCamp(camp.id)"></app-show-camp-form>
+            <app-show-camp-form
+              [camp]="camp"
+              (saved)="loadCamp(camp.id)"
+              (closed)="toggleCampInfo()">
+            </app-show-camp-form>
           </div>
         </div>
       </div>

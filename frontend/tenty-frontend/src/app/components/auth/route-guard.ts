@@ -18,7 +18,7 @@ export const loginRedirctGuard: CanActivateFn = (route, state) => {
   const router = inject(Router);
 
   return authService.isLoggedIn$.pipe(
-    map((loggedIn) => (loggedIn ? false: router.parseUrl('/')))
+    map((loggedIn) => (loggedIn ? router.parseUrl('/home') : true))
   )
 
 }

@@ -8,6 +8,7 @@ import { MatCardModule } from '@angular/material/card';
 import {merge} from 'rxjs';
 import { Auth } from '../../auth/auth';
 import { LoginDTO } from '../../../models';
+import { Router } from '@angular/router';
 
 
 @Component({
@@ -19,6 +20,7 @@ import { LoginDTO } from '../../../models';
 })
 export class LoginForm {
   auth = inject(Auth);
+  router = inject(Router);
   loading = signal(false);
   readonly email = new FormControl('', [Validators.required, Validators.email]);
   errorMessage = signal('');
@@ -41,15 +43,18 @@ export class LoginForm {
 
   
   onSubmit() {
-  if(this.email.invalid) return;
-  const dto : LoginDTO = {
-    mailAddress: this.email.value
-  }
-  if (this.loading()) return;
-  this.loading.set(true);
-  this.auth.login(dto).subscribe({
-    next: () => { this.loading.set(false); },
-    error: () => { this.loading.set(false); this.errorMessage.set('Login fehlgeschlagen'); }
-  });
+    if (this.email.invalid || this.loading()) return;
+    const dto: LoginDTO = { mailAddress: this.email.value };
+    this.loading.set(true);
+    this.auth.login(dto).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.router.navigate(['/home']);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.errorMessage.set('Login fehlgeschlagen');
+      }
+    });
   }
 }

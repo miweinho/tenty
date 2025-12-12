@@ -1,59 +1,157 @@
-# TentyFrontend
+# Tenty Frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.2.0.
+Angular-based frontend for the Tenty camp planning application.
 
-## Development server
+## Tech Stack
 
-To start a local development server, run:
+- **Angular 18+** (Standalone Components)
+- **TypeScript**
+- **OpenLayers** (Map rendering & interactions)
+- **Angular Material** (UI Components)
+- **RxJS** (Reactive State Management)
 
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Installation
 
 ```bash
-ng generate component component-name
+npm install
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Development
 
 ```bash
-ng generate --help
+npm start
 ```
 
-## Building
+The application runs on `http://localhost:4200/`.
 
-To build the project run:
+API calls target `http://localhost:5000/api` in development. Ensure the backend is running via `dotnet run` and the database container is up (see `tenty/dev/docker-compose.yml`).
+
+## Build
 
 ```bash
-ng build
+npm run build
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
+Production Build:
 ```bash
-ng test
+npm run build -- --configuration production
 ```
 
-## Running end-to-end tests
+## Project Structure
 
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
+```
+src/app/
+├── components/
+│   ├── auth/              # Authentication
+│   ├── forms/             # Forms (Create/Show Camp)
+│   ├── maps/              # Map Components
+│   │   ├── camp-main-map-view/
+│   │   ├── pick-location-map-view/
+│   │   └── pick-zone-map-view/
+│   └── pages/             # Pages & Layout
+│       ├── overlay/       # App shell with navigation
+│       ├── map/           # Base map component
+│       └── mapview/       # Base map view logic
+├── service/
+│   ├── camps/             # Camp service (API communication)
+│   ├── campMapHelperService/  # Map helper utilities
+│   ├── drawingService/    # Drawing logic for features
+│   └── httpService/       # HTTP client wrapper
+└── models/                # TypeScript DTOs & Interfaces
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+## Key Components
 
-## Additional Resources
+### Maps
+- **CampMainMapView**: Main map displaying camps, features & zones
+- **PickLocationMapView**: Interactive map for selecting camp locations
+- **PickZoneMapView**: Draw & edit camp zones (polygons)
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+### Forms
+- **CreateCampForm**: Multi-step form for camp creation
+- **ShowCampForm**: Display & edit existing camps
+
+### Pages
+- **Overlay**: App shell with drawer navigation & toolbar
+
+## Services
+
+### CampService
+Central service layer for camp operations:
+- `loadCampList()` / `refreshCampsList()`
+- `createCamp()` / `updateCamp()` / `deleteCamp()`
+- `loadCamp()` / `getCamp$()`
+- Observable-based state management via `camps$`
+
+### DrawingService
+OpenLayers feature management:
+- `addFeature()` / `clearAll()`
+- `startDrawing()` / `stopDrawing()`
+- `featureClick$` Observable for feature interactions
+
+### CampMapHelperService
+Helper functions for map rendering:
+- `featureFromDto()`: DTO → OpenLayers Feature
+- `createZoneFeaturesFromCamp()`: Render camp zones on map
+- Style functions for camp elements
+
+## Map Interactions
+
+The application uses OpenLayers for:
+- **Feature selection**: Click events on camp features
+- **Polygon drawing**: Draw zones (delimitation)
+- **Point placement**: Select camp location
+- **Transform interaction** (planned): Rotate & scale icons
+
+## Authentication
+
+- JWT-based auth via `Auth` service
+- Route guards protect secured areas
+- Token storage in LocalStorage
+
+### Test Users
+
+Use these email addresses to test the application (seeded from `dev/init.sql`):
+
+- `anna.mueller@example.com`
+- `lukas.schmidt@example.com`
+- `sophie.weber@example.com`
+- `tim.fischer@example.com`
+- `laura.becker@example.com`
+
+## Environment Variables
+
+```typescript
+// src/environments/environment.ts
+export const environment = {
+  production: false,
+  apiUrl: 'http://localhost:5000/api'
+};
+```
+
+Alternatively, if using the Angular proxy, verify that `proxy.conf.json` routes `/api` to `http://localhost:5000`.
+
+## Scripts
+
+```json
+{
+  "start": "ng serve",
+  "build": "ng build",
+  "test": "ng test",
+  "lint": "ng lint"
+}
+```
+
+## Development Notes
+
+- **Standalone Components**: All components use `standalone: true`
+- **Reactive Forms**: FormGroup/FormControl for all forms
+- **RxJS Observables**: Asynchronous data flows via services
+- **Material Design**: Consistent UI via Angular Material
+- **TypeScript strict mode**: Type safety at all levels
+
+## Known Limitations
+
+- Transform interaction (ol-ext) not yet implemented
+- Asymmetric scaling of icons in planning
+- Feature details not fully implemented yet

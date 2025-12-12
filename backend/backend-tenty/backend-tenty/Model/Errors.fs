@@ -2,7 +2,6 @@
 module backend_tenty.Model.Errors
 
 open System.Threading.Tasks
-open Giraffe
 
 /// General application error cases surfaced by the API.
 type AppError =

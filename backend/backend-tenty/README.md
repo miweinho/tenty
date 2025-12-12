@@ -15,7 +15,14 @@ Requirements
 
 Quick start (development)
 -------------------------
-1. Open a command prompt (cmd.exe) and go to the repository root (where `backend-tenty.sln` lives):
+0. Start the database (PostgreSQL + PostGIS) in a container:
+
+```cmd
+cd ..\..\dev
+docker compose up -d
+```
+
+1. Open a command prompt (cmd.exe) and go to the backend folder (where `backend-tenty.fsproj` lives):
 
 ```cmd
 cd \path\to\repo\tenty\backend\backend-tenty
@@ -35,7 +42,15 @@ cd backend-tenty
 dotnet run --project backend-tenty.fsproj
 ```
 
-By default the app will read `appsettings.json` and `appsettings.Development.json` for configuration. You can change environment specific settings using environment variables or by editing `appsettings.Development.json` for local development.
+By default the app listens on `http://localhost:5000` (Swagger UI at `/swagger`).
+
+The database connection for local development points to:
+
+```
+Host=localhost;Database=tenty;Username=tenty_user;Password=tenty_password
+```
+
+Make sure the DB container is running (step 0) before starting the backend. You can change environment specific settings using `appsettings.Development.json` if needed.
 
 Run tests
 ---------
@@ -50,13 +65,7 @@ This runs the unit tests (xUnit) found in the `Tests.test` project.
 
 Docker (optional)
 -----------------
-A `Dockerfile` and `compose.yaml` are present in the repository. To run the backend with Docker Compose (from the repo root):
-
-```cmd
-docker compose up --build
-```
-
-This will build the container image and start the service. Adjust environment variables in the compose file or Docker run command as needed.
+A `Dockerfile` exists for image builds. The recommended local workflow is to run the DB in Docker and the backend via `dotnet run` as shown above.
 
 Configuration
 -------------

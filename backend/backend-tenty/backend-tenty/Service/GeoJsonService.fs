@@ -6,7 +6,6 @@ open System.Collections.Generic
 open System.Globalization
 open System.Text.Json
 open System.Text.Json.Serialization
-open Giraffe
 open System.Text.RegularExpressions
 
 /// Represents a geographic coordinate with longitude/latitude precision.

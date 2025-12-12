@@ -13,13 +13,14 @@ open Microsoft.OpenApi.Models
 open backend_tenty.Model.Types
 
 module Program =
-    /// Exit code returned when the application shuts down gracefully.
+    /// Exit code returned when the application shuts down. Non-zero on startup failure.
     let exitCode = 0
 
     [<EntryPoint>]
     /// Configures dependency injection, authentication, and middleware before starting the web host.
     let main args =
         printfn "Starting Tenty Backend..."
+
         if Database.testConnection() then
             printfn "Database ready"
             let builder = WebApplication.CreateBuilder(args)
@@ -88,9 +89,15 @@ module Program =
                         )
                 |> ignore
             
+            let devOrigins =
+                [| "http://localhost:4200"
+                   "https://localhost:4200"
+                   "http://127.0.0.1:4200"
+                   "https://127.0.0.1:4200" |]
+
             builder.Services.AddCors(fun opts ->
                 opts.AddPolicy("LocalDev", fun p ->
-                    p.WithOrigins("http://localhost:4200")
+                    p.WithOrigins(devOrigins)
                      .AllowAnyHeader()
                      .AllowAnyMethod()
                      .AllowCredentials()

@@ -20,11 +20,13 @@ export class Auth {
   public readonly isLoggedIn$ = this._isLoggedIn$.asObservable();
 
   private initialize(): void {
-    console.log("hello from initailize auth");
     // 1) Wenn Access noch gültig -> loggedIn = true
     if (this.hasValidAccessToken()) {
-      console.log("has valid acces token!");
       this._isLoggedIn$.next(true);
+      const current = this.router.url;
+      if (current === '/' || current === '/login' || current === '') {
+        this.router.navigateByUrl('/home');
+      }
       return;
     }
 
@@ -35,6 +37,10 @@ export class Auth {
         next: () => {
           // refresh hat neue Tokens gespeichert
           this._isLoggedIn$.next(true);
+          const current = this.router.url;
+          if (current === '/' || current === '/login' || current === '') {
+            this.router.navigateByUrl('/home');
+          }
         },
         error: () => {
           // refresh fehlgeschlagen -> Tokens löschen / ausloggen
@@ -52,15 +58,8 @@ export class Auth {
 
   login(dto: LoginDTO): Observable<void> {
     return this.http.post<TokenPair>('User/login', dto).pipe(
-      tap(pair => {
-        this.saveToken(pair); 
-        this.router.navigateByUrl('/');
-        }),
-      map(() => void 0),
-      catchError(err => {
-        // do not change loggedInSubject here; caller handles errors
-        throw err;
-      })
+      tap(pair => this.saveToken(pair)),
+      map(() => void 0)
     );
   }
 
