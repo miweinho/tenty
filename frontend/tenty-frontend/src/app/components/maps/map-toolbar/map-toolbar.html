@@ -1,0 +1,26 @@
+<div class="map-toolbar">
+  <button mat-icon-button (click)="onDraw('tent')" aria-label="Draw tent">
+    <mat-icon>home</mat-icon>
+  </button>
+  <button mat-icon-button (click)="onDraw('water')" aria-label="Draw water line">
+    <mat-icon>water</mat-icon>
+  </button>
+
+  <div class="spacer"></div>
+
+  <button mat-icon-button (click)="undo.emit()" aria-label="Undo">
+    <mat-icon>undo</mat-icon>
+  </button>
+  <button mat-icon-button (click)="redo.emit()" aria-label="Redo">
+    <mat-icon>redo</mat-icon>
+  </button>
+  <button mat-icon-button (click)="refresh.emit()" aria-label="Refresh">
+    <mat-icon>refresh</mat-icon>
+  </button>
+  <button mat-icon-button color="primary" (click)="save.emit()" [disabled]="!dirty" aria-label="Save">
+    <mat-icon>save</mat-icon>
+  </button>
+  <button mat-icon-button (click)="openCampInfo.emit()" aria-label="Camp info">
+    <mat-icon>info</mat-icon>
+  </button>
+</div>

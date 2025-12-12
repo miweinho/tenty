@@ -1,0 +1,85 @@
+<mat-card>
+  <mat-card-header>
+    <mat-card-title>Camp Details</mat-card-title>
+    <span class="spacer"></span>
+    <button mat-icon-button (click)="onClose()" aria-label="Close camp details">
+      <mat-icon>close</mat-icon>
+    </button>
+  </mat-card-header>
+
+  <mat-card-content>
+    <mat-horizontal-stepper linear>
+      <mat-step [stepControl]="locationControl">
+        <ng-template matStepLabel>Location</ng-template>
+        <form [formGroup]="campForm">
+          <app-pick-location-map-view
+            [initialLocation]="campForm.value.location ?? null"
+            (locationConfirm)="onLocationPicked($event)">
+          </app-pick-location-map-view>
+        </form>
+        <div class="step-actions">
+          <button mat-button matStepperNext>Next</button>
+        </div>
+      </mat-step>
+
+      <mat-step [stepControl]="delimitationControl">
+        <ng-template matStepLabel>Delimitation</ng-template>
+        <form [formGroup]="campForm">
+          <app-pick-zone-map-view
+            mode="campDelimitation"
+            [location]="campForm.get('location')?.value ?? null"
+            [initialZone]="campForm.get('delimitation.zone')?.value ? {
+              zone: campForm.get('delimitation.zone')!.value,
+              name: campForm.get('delimitation.name')?.value ?? 'Camp Delimitation',
+              color: campForm.get('delimitation.color')?.value ?? '#ff0000',
+              isCampDelimitation: campForm.get('delimitation.isCampDelimitation')?.value ?? true
+            } : null"
+            (zonePicked)="onZonePicked($event)">
+          </app-pick-zone-map-view>
+        </form>
+        <div class="step-actions">
+          <button mat-button matStepperPrevious>Back</button>
+          <button mat-button matStepperNext>Next</button>
+        </div>
+      </mat-step>
+
+      <mat-step [stepControl]="nameControl">
+        <ng-template matStepLabel>Details</ng-template>
+        <div class="details-view readable">
+          <div class="detail-row">
+            <div class="label">Name</div>
+            <div class="value">{{ camp?.name }}</div>
+          </div>
+          <div class="detail-row">
+            <div class="label">City</div>
+            <div class="value">{{ camp?.campDetail?.city }}</div>
+          </div>
+          <div class="detail-row">
+            <div class="label">Start</div>
+            <div class="value">{{ camp?.campDetail?.startDate }}</div>
+          </div>
+          <div class="detail-row">
+            <div class="label">End</div>
+            <div class="value">{{ camp?.campDetail?.endDate }}</div>
+          </div>
+          <div class="detail-row">
+            <div class="label">Description</div>
+            <div class="value">{{ camp?.campDetail?.description }}</div>
+          </div>
+          <div class="detail-row">
+            <div class="label">Shown Maps</div>
+            <div class="value">{{ camp?.shownMaps?.join(', ') }}</div>
+          </div>
+          <div class="detail-row">
+            <div class="label">Camp Zones</div>
+            <div class="value">{{ camp?.campZones?.length || 0 }}</div>
+          </div>
+        </div>
+        <div class="step-actions">
+          <button mat-button matStepperPrevious>Back</button>
+          <button mat-raised-button color="primary" (click)="submit()">Save</button>
+        </div>
+      </mat-step>
+    </mat-horizontal-stepper>
+  </mat-card-content>
+</mat-card>

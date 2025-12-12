@@ -1,0 +1,49 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.placeholder {
+  border: 1px dashed #ccc;
+  padding: 12px;
+  margin: 12px 0;
+  text-align: center;
+}
+
+.step-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.location-preview, .delimitation-preview {
+  background: #fafafa;
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 12px;
+  max-height: 160px;
+  overflow: auto;
+}
+
+.details-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.subcamp-row, .detail-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.subcamp-list, .detail-list {
+  margin-top: 12px;
+}
+
+.step-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}

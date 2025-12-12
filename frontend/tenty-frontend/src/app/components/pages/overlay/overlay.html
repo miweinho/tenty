@@ -1,0 +1,36 @@
+<mat-sidenav-container>
+  <mat-sidenav #drawer mode="side" [opened]="false">
+    <mat-nav-list>
+      <mat-list-item (click)="navigate('/home')">
+        <span matListItemTitle>Camp List</span>
+      </mat-list-item>
+
+      @if (hasCamp$ | async) {
+      <mat-list-item (click)="navigate('/camp')">
+        <span matListItemTitle>Current Camp</span>
+      </mat-list-item>
+      }
+
+      <mat-list-item (click)="navigate('/create-camp')">
+        <span matListItemTitle>Create Camp</span>
+      </mat-list-item>
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar>
+      <button matIconButton (click)="toggleDrawer()" aria-label="Drawer button that toggles the side navigation.">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <span>tenty</span>
+      <span class="toolbar-spacer"></span>
+      <button matIconButton aria-label="Logout button to exit application as user." (click)="handleLogout()">
+        <mat-icon>logout</mat-icon>
+      </button>
+    </mat-toolbar>
+
+    <div class="page-content">
+      <router-outlet></router-outlet>
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>

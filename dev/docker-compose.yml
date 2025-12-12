@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgis/postgis:18-3.6-alpine
+    container_name: tenty-postgres
+    environment:
+      POSTGRES_DB: tenty
+      POSTGRES_USER: tenty_user
+      POSTGRES_PASSWORD: tenty_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tenty_user -d tenty"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

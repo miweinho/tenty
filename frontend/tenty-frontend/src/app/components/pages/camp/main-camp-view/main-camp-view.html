@@ -1,0 +1,91 @@
+<div class="main-camp-view">
+  <div class="map-wrapper">
+    <app-camp-main-map-view
+      [camp]="camp"
+      [features]="features"
+      (mapReadyEvent)="onMapReady()"
+      (featureSelected)="onFeatureSelected($event)">
+    </app-camp-main-map-view>
+
+    <div class="floating-toolbar">
+      <app-map-toolbar
+        [dirty]="dirty"
+        (startDraw)="onStartDraw($event)"
+        (undo)="onUndo()"
+        (redo)="onRedo()"
+        (refresh)="onRefresh()"
+        (save)="onSave()"
+        (openCampInfo)="toggleCampInfo()">
+      </app-map-toolbar>
+    </div>
+
+    <div class="corner-buttons">
+      <button mat-raised-button color="primary" type="button" (click)="onRefresh()">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+      <button mat-raised-button type="button" (click)="toggleCampInfo()">
+        <mat-icon>info</mat-icon>
+        Camp Info
+      </button>
+      @if (dirty) {
+        <button mat-raised-button color="accent" type="button" (click)="onSave()">
+          <mat-icon>save</mat-icon>
+          Save
+        </button>
+      }
+    </div>
+
+    @if (showCampInfo && camp) {
+      <div class="overlay">
+        <div class="overlay-content dialog">
+          <mat-toolbar color="primary" class="popup-header">
+            <span>{{ camp.name }}</span>
+            <span class="spacer"></span>
+            <button mat-icon-button (click)="toggleCampInfo()">
+              <mat-icon>close</mat-icon>
+            </button>
+          </mat-toolbar>
+          <div class="popup-body form">
+            <app-show-camp-form
+              [camp]="camp"
+              (saved)="loadCamp(camp.id)"
+              (closed)="toggleCampInfo()">
+            </app-show-camp-form>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (selectedFeature && featureDraft && showFeaturePopup) {
+      <mat-card class="popup feature-popup">
+        <mat-toolbar color="primary" class="popup-header">
+          <span>Feature</span>
+          <span class="spacer"></span>
+          <button mat-icon-button (click)="closeFeaturePopup()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </mat-toolbar>
+        <div class="popup-body form">
+          <mat-form-field appearance="fill">
+            <mat-label>Name</mat-label>
+            <input matInput type="text" [(ngModel)]="featureDraft.name" />
+          </mat-form-field>
+          <mat-form-field appearance="fill">
+            <mat-label>Kind</mat-label>
+            <input matInput type="text" [(ngModel)]="featureDraft.kind" />
+          </mat-form-field>
+          <mat-form-field appearance="fill">
+            <mat-label>Color</mat-label>
+            <input matInput type="color" [(ngModel)]="featureDraft.color" />
+          </mat-form-field>
+        </div>
+        <div class="popup-actions">
+          <button mat-raised-button color="primary" type="button" (click)="saveFeatureDraft()">Save</button>
+          <button mat-stroked-button color="warn" type="button" (click)="deleteFeatureDraft()">Delete</button>
+          <button mat-button type="button" (click)="closeFeaturePopup()">Close</button>
+        </div>
+      </mat-card>
+    }
+  </div>
+</div>

@@ -1,0 +1,64 @@
+<!-- pick-location-map-view.html -->
+<div class="pick-zone-container">
+  <div class="map-wrapper">
+    <app-map (mapReady)="onMapReady($event)"></app-map>
+    <div class="overlay-controls">
+
+      <mat-toolbar color="primary" class="pick-zone-toolbar">
+        <mat-toolbar-row>
+          <button
+            mat-raised-button
+            color="accent"
+            type="button"
+            (click)="startPickingZone()"
+            [disabled]="pickingActive"
+          >
+
+            <mat-icon>gesture</mat-icon>
+            @if (!pickingActive) { <span>Draw zone</span> } @else { <span>Draw polygon…</span> }
+          </button>
+
+          <button mat-button type="button" (click)="clearZone()" [disabled]="!hasSelection">
+            <mat-icon>delete</mat-icon>
+            Delete Zone
+          </button>
+
+          <span class="spacer"></span>
+
+          <button
+            mat-stroked-button
+            color="primary"
+            type="button"
+            (click)="confirmZone()"
+            [disabled]="!hasSelection"
+          >
+            <mat-icon>check</mat-icon>
+            Choose zone
+          </button>
+
+          <button mat-button type="button" (click)="onCancel()">
+            <mat-icon>close</mat-icon>
+            Abort
+          </button>
+        </mat-toolbar-row>
+
+        @if (showNameAndColor) {
+        <mat-toolbar-row>
+          <div class="zone-details" [formGroup]="zoneForm">
+            <mat-form-field appearance="outline">
+              <mat-label>Zone Name</mat-label>
+              <input matInput formControlName="name" placeholder="z.B. Kochbereich" />
+              <mat-error>Name ist erforderlich</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Farbe</mat-label>
+              <input matInput type="color" formControlName="color" />
+            </mat-form-field>
+          </div>
+        </mat-toolbar-row>
+        }
+      </mat-toolbar>
+    </div>
+  </div>
+</div>
