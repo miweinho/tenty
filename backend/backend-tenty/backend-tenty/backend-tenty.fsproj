@@ -41,11 +41,7 @@
 
     <ItemGroup>
       <PackageReference Include="FsToolkit.ErrorHandling" Version="5.1.0" />
-      <PackageReference Include="Giraffe" Version="8.1.0-alpha-001" />
-      <PackageReference Include="Giraffe.OpenApi" Version="0.0.2" />
       <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.10" />
-      <PackageReference Include="NetTopologySuite" Version="2.6.0" />
-      <PackageReference Include="NetTopologySuite.IO.GeoJSON" Version="4.0.0" />
       <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.4" />
       <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
     </ItemGroup>
