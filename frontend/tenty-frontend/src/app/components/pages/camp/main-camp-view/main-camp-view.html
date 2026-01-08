@@ -6,6 +6,13 @@
       <div class="map-container">
         <app-camp-main-map-view [camp]="camp" [features]="features"> </app-camp-main-map-view>
       </div>
+      <div class="floating-toolbar">
+        <app-map-toolbar
+        (refresh)="onRefresh()"
+        (drawTent)="onDrawTent()"
+        (save)="onSave()">
+      </app-map-toolbar>
+      </div>
 
   
 
