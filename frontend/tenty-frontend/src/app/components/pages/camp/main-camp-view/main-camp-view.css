@@ -1,7 +1,25 @@
-.main-camp-view {
-  position: relative;
-  height: 100 vh;
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;        /* allow children to shrink inside flex parents */
 }
+
+.main-camp-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100vh;        /* or 100% if the parent already manages height */
+}
+
+.map-container {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* remove or reuse .map-wrapper if unused */
 
 .map-wrapper {
   position: relative;
@@ -100,4 +118,16 @@
   top: 50%;
   left: 50%;
 
+}
+
+/* Larger font and spacing for the header chip */
+mat-chip {
+  font-size: 1.05rem;
+  line-height: 1.4;
+  margin: 8px 0 12px; /* space above/below */
+}
+
+/* Optional: a touch more horizontal padding for the label */
+.mat-mdc-chip .mdc-evolution-chip__text-label {
+  padding-inline: 4px;
 }

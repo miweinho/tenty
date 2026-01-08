@@ -15,6 +15,13 @@ html {
     typography: Roboto,
     density: 0,
   ));
+    @include mat.chips-overrides((
+    disabled-label-text-color: black,
+    disabled-outline-color: grey,
+    label-text-line-height: 2,
+    label-text-size: 1.05 rem, // increase size
+    label-text-weight: 500  
+  ));
 }
 
 body {

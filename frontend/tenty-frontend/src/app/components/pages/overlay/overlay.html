@@ -1,5 +1,5 @@
-<mat-sidenav-container>
-  <mat-sidenav #drawer mode="side" [opened]="false">
+<mat-sidenav-container class="overlay-root">
+  <mat-sidenav #drawer mode="side" [opened]="false" class="overlay-sidenav">
     <mat-nav-list>
       <mat-list-item (click)="navigate('/home')">
         <span matListItemTitle>Camp List</span>
@@ -17,7 +17,7 @@
     </mat-nav-list>
   </mat-sidenav>
 
-  <mat-sidenav-content>
+  <mat-sidenav-content class="overlay-content">
     <mat-toolbar>
       <button matIconButton (click)="toggleDrawer()" aria-label="Drawer button that toggles the side navigation.">
         <mat-icon>menu</mat-icon>

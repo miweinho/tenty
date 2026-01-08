@@ -1,3 +1,26 @@
 .toolbar-spacer {
   flex: 1 1 auto;
 }
+
+.overlay-root {
+  height: 100vh;            /* fill viewport */
+}
+
+.overlay-sidenav {
+  width: 280px;
+  top: 50px;            /* fixed side width */
+}
+
+.overlay-content {
+  display: flex;            /* stack toolbar + content */
+  flex-direction: column;
+  height: 100%;
+}
+
+.page-content {
+  flex: 1 1 auto;           /* use all remaining space */
+  overflow: auto;           /* scroll routed content */
+  padding: 16px;
+  box-sizing: border-box;
+  margin-top: 50px;
+}

@@ -1,28 +1,15 @@
 <div class="main-camp-view">
-  
-@if (loading) {
+  @if (loading) {
   <mat-spinner class="loading-spinner" diameter="50"></mat-spinner>
-} @else {
-  <mat-toolbar color="primary">
-    <span>{{ camp?.name ?? 'Camp' }}</span>
-    <span class="spacer"></span>
-    <app-map-toolbar
-      (drawTent)="onDrawTent()"
-      (refresh)="onRefresh()"
-      (save)="onSave()">
-    </app-map-toolbar>
-  </mat-toolbar>
+  } @else {
+    <mat-chip disabled>{{ camp?.name ?? 'Camp' }}</mat-chip>
+      <div class="map-container">
+        <app-camp-main-map-view [camp]="camp" [features]="features"> </app-camp-main-map-view>
+      </div>
 
-  <div class="map-container">
-    <app-camp-main-map-view
-      [camp]="camp"
-      [features]="features">
-    </app-camp-main-map-view>
-  </div>
+  
 
-}
-  @if(error) {
-      <div class="error-message">{{ error }}</div>
-
+  } @if(error) {
+  <div class="error-message">{{ error }}</div>
   }
 </div>

@@ -15,6 +15,7 @@ import { CampService } from '../../../../service/camps/camp';
 import { FeatureService } from '../../../../service/feature/feature.service';
 
 import { FeatureDto, FullCampDto } from '../../../../models';
+import { MatChip } from '@angular/material/chips';
 
 @Component({
   selector: 'app-main-camp-view',
@@ -27,6 +28,7 @@ import { FeatureDto, FullCampDto } from '../../../../models';
     MatIconModule,
     MatToolbarModule,
     MatProgressSpinnerModule,
+    MatChip
   ],
   templateUrl: './main-camp-view.html',
   styleUrls: ['./main-camp-view.css'],
