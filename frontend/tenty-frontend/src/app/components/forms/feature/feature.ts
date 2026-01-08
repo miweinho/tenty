@@ -27,17 +27,17 @@ export class Feature {
   @Output() featureCreated = new EventEmitter<any>();
   
   featureForm: FormGroup;
-  featureTypes = ['tent', '', ''];
+  featureTypes = ['tent', 'water', ''];
 
   constructor(private fb: FormBuilder) {
     this.featureForm = this.fb.group({
       featureType: ['', Validators.required],
       name: ['', Validators.required],
       // Tent-spezifische Felder
-      length: [''],
-      width: [''],
-      orientation: [''],
-      color: ['#000000']
+      length: [10],
+      width: [8],
+      orientation: [0],
+      color: ['#ffffff']
     });
   }
 

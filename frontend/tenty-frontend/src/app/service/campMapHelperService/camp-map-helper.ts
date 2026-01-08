@@ -25,21 +25,7 @@ import { rectPolygonFromCenter3857, rotateHandlePointFromCenter3857 } from './re
 export class CampMapHelperService {
   private geoJson = new GeoJSON();
 
-  // Cache, damit nicht pro Feature neu gebaut wird
-  private readonly tentStyleFn: StyleFunction = this.tentStyle();
-
-  // ---------------------------------------------------
-  // GeoJSON DTO -> OL Feature
-  // ---------------------------------------------------
-
-  /**
-   * Wandelt ein GeoJsonFeatureDto in ein OL-Feature um
-   * und projiziert von EPSG:4326 (GeoJSON) nach EPSG:3857 (Map).
-   */
-  featureFromDto(
-    dto: GeoJsonFeatureDto,
-    extraProps?: Record<string, any>
-  ): Feature<Geometry> {
+  featureFromDto(dto: GeoJsonFeatureDto, extraProps?: Record<string, any>): Feature<Geometry> {
     const mergedProps = {
       ...(dto.properties ?? {}),
       ...(extraProps ?? {}),
@@ -57,24 +43,16 @@ export class CampMapHelperService {
       }
     ) as Feature<Geometry>;
 
-    // Tent: Geometry bleibt POINT (Backend), Rendering als Rechteck via Style-Geometry
     if (feature.get('kind') === 'tent') {
       if (feature.get('lengthM') == null) feature.set('lengthM', 40);
       if (feature.get('widthM') == null) feature.set('widthM', 20);
       if (feature.get('headingDeg') == null) feature.set('headingDeg', 0);
       if (feature.get('icon') == null) feature.set('icon', 'tent');
 
-      this.applyTentLayout(feature);
+      // WICHTIG: kein feature.setStyle(...) hier
     }
 
     return feature;
-  }
-
-  /** Öffentlich: wende Zelt-Layout auf ein OL-Feature an (Point bleibt Point). */
-  public applyTentLayout(feature: Feature<Geometry>): void {
-    const geom = feature.getGeometry();
-    if (!(geom instanceof Point)) return;
-    feature.setStyle(this.tentStyleFn);
   }
 
   /**

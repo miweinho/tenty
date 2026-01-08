@@ -14,6 +14,11 @@
     <input matInput formControlName="name">
   </mat-form-field>
 
+  <mat-form-field appearance="outline">
+      <mat-label>Color</mat-label>
+      <input matInput type="color" formControlName="color">
+    </mat-form-field>
+
   <!-- Tent-specific fields -->
   @if (isFeatureType('tent')) {
     <mat-form-field appearance="outline">
@@ -29,12 +34,7 @@
     <mat-form-field appearance="outline">
       <mat-label>Orientation</mat-label>
       <input matInput type="number" formControlName="orientation">
-    </mat-form-field>
-
-    <mat-form-field appearance="outline">
-      <mat-label>Color</mat-label>
-      <input matInput type="color" formControlName="color">
-    </mat-form-field>
+    </mat-form-field>    
   }
 
   <button mat-raised-button color="primary" type="submit">Submit</button>

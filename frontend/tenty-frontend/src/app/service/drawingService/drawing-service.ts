@@ -1,20 +1,15 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Subject, Observable } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { Vector as VectorLayer } from 'ol/layer';
 import { Vector as VectorSource } from 'ol/source';
 import Map from 'ol/Map';
 import Feature from 'ol/Feature';
 import Geometry from 'ol/geom/Geometry';
-import { Style, Fill, Stroke, Circle, Text } from 'ol/style';
-import { FeatureLike } from 'ol/Feature';
 import Draw from 'ol/interaction/Draw';
 import { Type as GeometryType } from 'ol/geom/Geometry';
-import {
-  createEmpty,
-  extend as extendExtent,
-  getWidth,
-  getHeight,
-} from 'ol/extent';
+import { createEmpty, extend as extendExtent, getWidth, getHeight } from 'ol/extent';
+
+import { MapStyleService } from '../mapStyle/map-style.service';
 
 @Injectable({
   providedIn: 'root'
@@ -22,10 +17,21 @@ import {
 export class DrawingService {
   private map?: Map;
   private vectorSource = new VectorSource<Feature<Geometry>>();
-  private vectorLayer = new VectorLayer({
-    source: this.vectorSource,
-    style: (feature: FeatureLike) => this.getStyleForFeature(feature)
-  });
+
+  // vorher: private vectorLayer = new VectorLayer({ ... style: this.mapStyle.layerStyleFn })
+  private vectorLayer!: VectorLayer<VectorSource<Feature<Geometry>>>;
+
+  constructor(private readonly mapStyle: MapStyleService) {
+    this.vectorSource.on('addfeature', () => this.updateFeatures());
+
+    this.vectorLayer = new VectorLayer({
+      source: this.vectorSource,
+      style: this.mapStyle.layerStyleFn,
+    });
+
+    // Alles auf diesem Layer (Fill, Stroke, Text, Icons) 50% transparent
+    this.vectorLayer.setOpacity(0.5);
+  }
 
   // Observables
   private featuresSubject = new BehaviorSubject<Feature<Geometry>[]>([]);
@@ -36,18 +42,6 @@ export class DrawingService {
 
   // Draw interaction
   private draw?: Draw;
-
-  constructor() {
-    // Listen to feature changes
-    this.vectorSource.on('addfeature', () => this.updateFeatures());
-    this.vectorSource.on('removefeature', () => this.updateFeatures());
-    this.vectorSource.on('changefeature', () => this.updateFeatures());
-    this.vectorSource.on('clear', () => this.updateFeatures());
-  }
-
-  // ---------------------------------------------------
-  // Map Initialisierung
-  // ---------------------------------------------------
 
   /**
    * Initialisiert den Service mit einer Map-Instanz
@@ -199,180 +193,6 @@ export class DrawingService {
       this.map.removeInteraction(this.draw);
       this.draw = undefined;
     }
-  }
-
-  // ---------------------------------------------------
-  // Styling
-  // ---------------------------------------------------
-
-  /**
-   * Gibt den Style für ein Feature basierend auf seinen Properties zurück
-   * - Wendet Farbe und Namen für alle kinds an
-   * - Für "tent": zusätzlich Länge und Breite
-   */
-  private getStyleForFeature(feature: FeatureLike): Style {
-    const color = feature.get('color') ?? '#ffcc33';
-    const name = feature.get('name') ?? '';
-    const kind = feature.get('kind');
-
-    // Spezielle Behandlung für verschiedene Typen
-    switch (kind) {
-      case 'tent':
-        return this.getTentStyle(feature, color, name);
-      case 'camp-location':
-        return this.getCampLocationStyle(color, name);
-      case 'camp-delimitation':
-        return this.getDelimitationStyle(color, name);
-      default:
-        return this.getDefaultFeatureStyle(color, name);
-    }
-  }
-
-  /**
-   * Style für Zelte mit Länge und Breite
-   */
-  private getTentStyle(feature: FeatureLike, color: string, name: string): Style {
-    const lengthM = feature.get('lengthM') ?? 40;
-    const widthM = feature.get('widthM') ?? 20;
-
-    let labelText = name;
-    if (name) {
-      labelText += `\n${lengthM}m × ${widthM}m`;
-    } else {
-      labelText = `${lengthM}m × ${widthM}m`;
-    }
-
-    return new Style({
-      fill: new Fill({
-        color: this.hexToRgba(color, 0.3),
-      }),
-      stroke: new Stroke({
-        color: color,
-        width: 3,
-      }),
-      text: new Text({
-        text: labelText,
-        font: 'bold 12px Arial, sans-serif',
-        fill: new Fill({
-          color: '#000000',
-        }),
-        stroke: new Stroke({
-          color: '#ffffff',
-          width: 3,
-        }),
-        offsetY: -20,
-      }),
-    });
-  }
-
-  /**
-   * Style für Camp-Position (Marker)
-   */
-  private getCampLocationStyle(color: string, name: string): Style {
-    return new Style({
-      image: new Circle({
-        radius: 10,
-        fill: new Fill({
-          color: color,
-        }),
-        stroke: new Stroke({
-          color: '#ffffff',
-          width: 2,
-        }),
-      }),
-      text: new Text({
-        text: name,
-        font: 'bold 14px Arial, sans-serif',
-        fill: new Fill({
-          color: '#000000',
-        }),
-        stroke: new Stroke({
-          color: '#ffffff',
-          width: 3,
-        }),
-        offsetY: -20,
-      }),
-    });
-  }
-
-  /**
-   * Style für Delimitation (Abgrenzung)
-   */
-  private getDelimitationStyle(color: string, name: string): Style {
-    return new Style({
-      fill: new Fill({
-        color: this.hexToRgba(color, 0.1),
-      }),
-      stroke: new Stroke({
-        color: color,
-        width: 2,
-        lineDash: [10, 5], // Gestrichelte Linie
-      }),
-      text: new Text({
-        text: name,
-        font: '12px Arial, sans-serif',
-        fill: new Fill({
-          color: '#000000',
-        }),
-        stroke: new Stroke({
-          color: '#ffffff',
-          width: 3,
-        }),
-        offsetY: -15,
-      }),
-    });
-  }
-
-  /**
-   * Standard-Style für alle anderen Features
-   */
-  private getDefaultFeatureStyle(color: string, name: string): Style {
-    return new Style({
-      fill: new Fill({
-        color: this.hexToRgba(color, 0.2),
-      }),
-      stroke: new Stroke({
-        color: color,
-        width: 2,
-      }),
-      image: new Circle({
-        radius: 7,
-        fill: new Fill({
-          color: color,
-        }),
-      }),
-      text: new Text({
-        text: name,
-        font: '12px Arial, sans-serif',
-        fill: new Fill({
-          color: '#000000',
-        }),
-        stroke: new Stroke({
-          color: '#ffffff',
-          width: 3,
-        }),
-        offsetY: -15,
-      }),
-    });
-  }
-
-  /**
-   * Konvertiert Hex-Farbe zu RGBA mit Alpha
-   * Input: "#abcabc", alpha: 0.2
-   * Output: "rgba(171, 202, 188, 0.2)"
-   */
-  private hexToRgba(hex: string, alpha: number): string {
-    const cleanHex = hex.replace('#', '');
-
-    if (cleanHex.length !== 6) {
-      return `rgba(255, 204, 51, ${alpha})`; // Fallback
-    }
-
-    const r = parseInt(cleanHex.substring(0, 2), 16);
-    const g = parseInt(cleanHex.substring(2, 4), 16);
-    const b = parseInt(cleanHex.substring(4, 6), 16);
-
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 
   // ---------------------------------------------------

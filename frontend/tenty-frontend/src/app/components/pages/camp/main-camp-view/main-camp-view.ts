@@ -15,7 +15,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CampService } from '../../../../service/camps/camp';
 import { FeatureService } from '../../../../service/feature/feature.service';
 
-import { CreateFeatureDto, FeatureDto, FullCampDto, GeoJsonFeatureDto } from '../../../../models';
+import { CreateFeatureDto, FeatureDto, FeatureKind, FullCampDto, GeoJsonFeatureDto } from '../../../../models';
 import { MatChip } from '@angular/material/chips';
 
 @Component({
@@ -107,7 +107,20 @@ export class MainCampViewComponent implements OnInit, OnDestroy {
 
   onSave(): void {}
 
-  onDrawLine(): void {}
+  async onDrawLine(): Promise<void> {
+    this.selectedFeatureType = 'water';
+    this.showFeatureForm = false;
+
+    this.cdr.detectChanges();
+    const dto = await this.mapView.startLinePlacement();
+
+    this.zone.run(()=> {
+      this.emptyDto = dto;
+      this.showFeatureForm = true;
+      this.cdr.markForCheck();
+    })
+    
+  }
 
   async onDrawObject(): Promise<void> {
     this.selectedFeatureType = 'tent';

@@ -18,6 +18,7 @@ import { CreateFeatureDto, FeatureDto, FullCampDto, GeoJsonFeatureDto } from '..
   styleUrls: ['./camp-main-map-view.css'],
 })
 export class CampMainMapView extends BaseCampMapView implements OnChanges {
+  
   @Input() camp: FullCampDto | null = null;
   @Input() features: FeatureDto[] | null = null;
   @Output() objectPlaced = new EventEmitter<{ x: number; y: number }>();
@@ -46,19 +47,19 @@ export class CampMainMapView extends BaseCampMapView implements OnChanges {
   private redraw(): void {
     if (!this.map) return;
 
-    // WICHTIG: Alles löschen
     this.drawingService.clearAll();
 
-    console.log('[CampMainMapView] redraw camp:', this.camp?.id, 'features:', this.features?.length);
-
-    // 1. Camp location zeichnen
     if (this.camp?.location) {
       const campName = this.camp.name ?? 'Camp';
       const locationFeature = this.campMapHelper.featureFromDto(this.camp.location, {
         kind: 'camp-location',
         name: campName,
+        color: '#2b7cff', // oder aus Camp/Theme ableiten
       });
-      this.campMapHelper.applyCampLabelStyle(locationFeature, campName);
+
+      // ENTFERNEN: sonst überschreibt es den Layer-Style
+      // this.campMapHelper.applyCampLabelStyle(locationFeature, campName);
+
       this.drawingService.addFeature(locationFeature);
     }
 
@@ -74,7 +75,6 @@ export class CampMainMapView extends BaseCampMapView implements OnChanges {
     }
 
     // 3. Features zeichnen
-    console.log(this.features);
     (this.features ?? []).forEach((f) => {
       const olFeature = this.campMapHelper.featureFromDto(f.geometry, {
         id: f.id,
@@ -105,7 +105,11 @@ export class CampMainMapView extends BaseCampMapView implements OnChanges {
    */
   async startObjectPlacement(): Promise<GeoJsonFeatureDto> {
     let geometry = await this.drawingService.drawOnce('Point')
-    console.log("geometry placed: ", geometry);
+    return this.campMapHelper.dtoFromFeature(geometry) as GeoJsonFeatureDto;
+  }
+
+  async startLinePlacement(): Promise<GeoJsonFeatureDto> {
+    let geometry = await this.drawingService.drawOnce('LineString');
     return this.campMapHelper.dtoFromFeature(geometry) as GeoJsonFeatureDto;
   }
 
