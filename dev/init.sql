@@ -240,21 +240,21 @@ VALUES
 INSERT INTO features (camp_id, kind, name, geom, heading_deg, length_m, width_m, color, icon, props)
 VALUES
   ((SELECT id FROM camps WHERE camp_name='Hauptlager'), 'tent', 'Zelt Alpha',
-   ST_GeomFromText('POLYGON((7.4388 46.9512, 7.4389 46.9512, 7.4389 46.9513, 7.4388 46.9513, 7.4388 46.9512))', 4326),
-   90.0, 8.0, 5.0, '#00FF00', 'tent-a', '{"capacity": 6}'::jsonb),
+   ST_GeomFromText('Point(7.4388 46.9512)', 4326),
+   90.0, 8.0, 4.0, '#00FF00', 'tent-a', '{"capacity": 6}'::jsonb),
   -- 2) Water line represented as a linestring
   ((SELECT id FROM camps WHERE camp_name='Hauptlager'), 'water', 'Wasserleitung 1',
    ST_GeomFromText('LINESTRING(7.4387 46.9510, 7.4393 46.9510)', 4326),
    NULL, NULL, NULL, '#0000FF', 'pipe', '{"diameter_mm": 50}'::jsonb),
   -- 3) Gate as point
-  ((SELECT id FROM camps WHERE camp_name='Nebenlager Nord'), 'gate', 'Haupteingang',
+  ((SELECT id FROM camps WHERE camp_name='Nebenlager Nord'), 'tent', 'Zelt Beta',
    ST_GeomFromText('POINT(7.43996 46.95154)', 4326),
-   270.0, NULL, NULL, '#FFA500', 'gate', NULL);
+   270.0, 10.0, 3.2, '#FFA500', 'gate', '{"capacity": 8}');
 
 -- Feature details examples
 INSERT INTO feature_details (feature_id, title, content)
 VALUES
   ((SELECT id FROM features WHERE name='Zelt Alpha' LIMIT 1), 'Hinweis', 'Dieses Zelt ist für die Lagerleitung reserviert.'),
-  ((SELECT id FROM features WHERE name='Haupteingang' LIMIT 1), 'Öffnungszeiten', 'Der Haupteingang ist zwischen 07:00 und 22:00 Uhr geöffnet.');
+  ((SELECT id FROM features WHERE name='Zelt Beta' LIMIT 1), 'Öffnungszeiten', 'Der Haupteingang ist zwischen 07:00 und 22:00 Uhr geöffnet.');
 
 COMMIT;

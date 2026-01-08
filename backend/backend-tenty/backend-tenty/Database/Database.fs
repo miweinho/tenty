@@ -832,7 +832,7 @@ let addNewFeature (dto: NewDbFeatureDto) : Task<Result<int, string>> = task {
         let! ids =
             connectionString
             |> Sql.connect
-            |> Sql.query "INSERT INTO tenty.features (camp_id, kind, name, geom, heading_deg, length_m, width_m, color, icon, props) VALUES (@camp_id, @kind::public.feature_kind, @name, ST_SetSRID(ST_GeomFromText(@geometry), 4326), @heading_deg, @length_m, @width_m, @color, @icon, @props) RETURNING id"
+            |> Sql.query "INSERT INTO tenty.features (camp_id, kind, name, geom, heading_deg, length_m, width_m, color, icon, props) VALUES (@camp_id, @kind::tenty.feature_kind, @name, ST_SetSRID(ST_GeomFromText(@geometry), 4326), @heading_deg, @length_m, @width_m, @color, @icon, @props) RETURNING id"
             |> Sql.parameters [
                 "@camp_id", Sql.int dto.CampId
                 "@kind", Sql.string dto.Kind
@@ -884,7 +884,7 @@ let updateDbFeature (dto: DbFeature) : Task<Result<int, string>> = task {
             connectionString
             |> Sql.connect
             |> Sql.query
-                "UPDATE tenty.features SET camp_id = @camp_id, kind = @kind::public.feature_kind, name = @name, geom = ST_SetSRID(ST_GeomFromText(@geometry), 4326), heading_deg = @heading_deg, length_m = @length_m, width_m = @width_m, color = @color, icon = @icon, props = @props WHERE id = @id"
+                "UPDATE tenty.features SET camp_id = @camp_id, kind = @kind::tenty.feature_kind, name = @name, geom = ST_SetSRID(ST_GeomFromText(@geometry), 4326), heading_deg = @heading_deg, length_m = @length_m, width_m = @width_m, color = @color, icon = @icon, props = @props WHERE id = @id"
             |> Sql.parameters [
                 "@camp_id", Sql.int dto.CampId
                 "@kind", Sql.string dto.Kind
