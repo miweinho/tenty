@@ -11,7 +11,8 @@
 }
 
 :host-context(.pick-location-container) .map-container,
-:host-context(.pick-zone-container) .map-container {
+:host-context(.pick-zone-container) .map-container,
+:host-context(.camp-overview-map-view) .map-container {
   height: 500px;
   min-height: 500px; /* oder gewünschte Pixelhöhe */
 }

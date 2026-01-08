@@ -1,0 +1,41 @@
+<form [formGroup]="featureForm" (ngSubmit)="onSubmit()">
+  
+  <mat-form-field appearance="outline">
+    <mat-label>Feature Type</mat-label>
+    <mat-select formControlName="featureType">
+      @for (type of featureTypes; track type) {
+        <mat-option [value]="type">{{ type }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Name</mat-label>
+    <input matInput formControlName="name">
+  </mat-form-field>
+
+  <!-- Tent-specific fields -->
+  @if (isFeatureType('tent')) {
+    <mat-form-field appearance="outline">
+      <mat-label>Length (m)</mat-label>
+      <input matInput type="number" formControlName="length">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Width (m)</mat-label>
+      <input matInput type="number" formControlName="width">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Orientation</mat-label>
+      <input matInput type="number" formControlName="orientation">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Color</mat-label>
+      <input matInput type="color" formControlName="color">
+    </mat-form-field>
+  }
+
+  <button mat-raised-button color="primary" type="submit">Submit</button>
+</form>

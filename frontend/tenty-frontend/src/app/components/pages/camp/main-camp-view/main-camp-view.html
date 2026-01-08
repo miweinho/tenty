@@ -1,22 +1,48 @@
 <div class="main-camp-view">
   @if (loading) {
-  <mat-spinner class="loading-spinner" diameter="50"></mat-spinner>
+    <mat-spinner class="loading-spinner" diameter="50"></mat-spinner>
   } @else {
     <mat-chip disabled>{{ camp?.name ?? 'Camp' }}</mat-chip>
-      <div class="map-container">
-        <app-camp-main-map-view [camp]="camp" [features]="features"> </app-camp-main-map-view>
-      </div>
-      <div class="floating-toolbar">
-        <app-map-toolbar
+    <div class="map-container">
+      <app-camp-main-map-view
+        [camp]="camp"
+        [features]="features"
+        >
+      </app-camp-main-map-view>
+    </div>
+
+    <div class="floating-toolbar">
+      <app-map-toolbar
         (refresh)="onRefresh()"
-        (drawTent)="onDrawTent()"
+        (drawObject)="onDrawObject()"
+        (drawLine)="onDrawLine()"
         (save)="onSave()">
       </app-map-toolbar>
+    </div>
+
+    <!-- Feature Form Dialog -->
+    @if (showFeatureForm) {
+      <div class="feature-form-overlay" (click)="closeFeatureForm()">
+        <div class="feature-form-container" (click)="$event.stopPropagation()">
+          <div class="form-header">
+            <h2>Create {{ selectedFeatureType }}</h2>
+            <button mat-icon-button (click)="closeFeatureForm()">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          <app-feature
+            [featureType]="selectedFeatureType"
+            (featureCreated)="onFeatureCreated($event)">
+          </app-feature>
+          <button mat-stroked-button (click)="closeFeatureForm()" class="abort-button">
+            Abort
+          </button>
+        </div>
       </div>
+    }
+  }
 
-  
-
-  } @if(error) {
-  <div class="error-message">{{ error }}</div>
+  @if(error) {
+    <div class="error-message">{{ error }}</div>
   }
 </div>

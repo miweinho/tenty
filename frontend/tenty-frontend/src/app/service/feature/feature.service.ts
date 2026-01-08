@@ -24,10 +24,15 @@ export class FeatureService {
   }
 
   /**
-   * Create a single feature.
+   * Create a single feature and update local state.
    */
   createFeature(dto: CreateFeatureDto): Observable<FeatureDto> {
-    return this.http.post<FeatureDto>('Feature', dto);
+    return this.http.post<FeatureDto>('Feature', dto).pipe(
+      tap((created) => {
+        const current = this.featuresSubject.value ?? [];
+        this.featuresSubject.next([...current, created]);
+      })
+    );
   }
 
   /**

@@ -1,13 +1,14 @@
-import { Component, Input, OnChanges, SimpleChanges, inject } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import Map from 'ol/Map';
 import Feature from 'ol/Feature';
 import Geometry from 'ol/geom/Geometry';
+import Point from 'ol/geom/Point';
 
 import { BaseCampMapView } from '../../pages/mapview/base-camp-map-view';
 import { MapComponent } from '../../pages/map/map';
 
-import { FeatureDto, FullCampDto } from '../../../models';
+import { CreateFeatureDto, FeatureDto, FullCampDto, GeoJsonFeatureDto } from '../../../models';
 
 @Component({
   selector: 'app-camp-main-map-view',
@@ -19,6 +20,9 @@ import { FeatureDto, FullCampDto } from '../../../models';
 export class CampMainMapView extends BaseCampMapView implements OnChanges {
   @Input() camp: FullCampDto | null = null;
   @Input() features: FeatureDto[] | null = null;
+  @Output() objectPlaced = new EventEmitter<{ x: number; y: number }>();
+
+  private placementClickKey: any = null;
 
   ngOnChanges(changes: SimpleChanges): void {
     // Nur redraw wenn map ready ist UND Daten sich ändern
@@ -70,6 +74,7 @@ export class CampMainMapView extends BaseCampMapView implements OnChanges {
     }
 
     // 3. Features zeichnen
+    console.log(this.features);
     (this.features ?? []).forEach((f) => {
       const olFeature = this.campMapHelper.featureFromDto(f.geometry, {
         id: f.id,
@@ -92,5 +97,19 @@ export class CampMainMapView extends BaseCampMapView implements OnChanges {
     try {
       this.map.updateSize();
     } catch {}
+  }
+
+  /**
+   * Startet den Objektplatzierungs-Modus
+   * Wartet auf einen Klick auf der Karte und emittiert die Position
+   */
+  async startObjectPlacement(): Promise<GeoJsonFeatureDto> {
+    let geometry = await this.drawingService.drawOnce('Point')
+    console.log("geometry placed: ", geometry);
+    return this.campMapHelper.dtoFromFeature(geometry) as GeoJsonFeatureDto;
+  }
+
+  cancelObjectPlacement(): void {
+    this.drawingService.stopDrawing();
   }
 }

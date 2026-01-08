@@ -12,17 +12,12 @@ import { MatIconModule } from '@angular/material/icon';
 })
 export class MapToolbarComponent {
   @Input() dirty = false;
-  @Output() startDraw = new EventEmitter<string>();
+  @Output() drawLine = new EventEmitter<void>();
+  @Output() drawObject = new EventEmitter<void>();
   @Output() undo = new EventEmitter<void>();
   @Output() redo = new EventEmitter<void>();
   @Output() refresh = new EventEmitter<void>();
   @Output() save = new EventEmitter<void>();
   @Output() openCampInfo = new EventEmitter<void>();
 
-  /** User wants to place a new tent (1 click on map). */
-  @Output('drawTentReqeusted') drawTentRequested = new EventEmitter<void>();
-
-  onDraw(kind: string): void {
-    this.startDraw.emit(kind);
-  }
 }

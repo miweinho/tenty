@@ -38,7 +38,7 @@ export class MapComponent implements AfterViewInit {
         center: [webMercatorX, webMercatorY],
         zoom: 8,
         minZoom: 6,
-        maxZoom: 18,
+        maxZoom: 19,
       }),
     });
     this.mapReady.emit(this.map);
