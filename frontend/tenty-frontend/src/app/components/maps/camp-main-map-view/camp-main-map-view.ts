@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import Map from 'ol/Map';
 import Feature from 'ol/Feature';
@@ -6,8 +6,7 @@ import Geometry from 'ol/geom/Geometry';
 
 import { BaseCampMapView } from '../../pages/mapview/base-camp-map-view';
 import { MapComponent } from '../../pages/map/map';
-import { CampMapHelperService } from '../../../service/campMapHelperService/camp-map-helper';
-import { DrawingService } from '../../../service/drawingService/drawing-service';
+
 import { FeatureDto, FullCampDto } from '../../../models';
 
 @Component({
@@ -21,48 +20,45 @@ export class CampMainMapView extends BaseCampMapView implements OnChanges {
   @Input() camp: FullCampDto | null = null;
   @Input() features: FeatureDto[] | null = null;
 
-  @Output() featureSelected = new EventEmitter<FeatureDto>();
-  @Output() mapReadyEvent = new EventEmitter<Map>();
+  ngOnChanges(changes: SimpleChanges): void {
+    // Nur redraw wenn map ready ist UND Daten sich ändern
+    if ((changes['camp'] || changes['features']) && this.map) {
+      this.redraw();
+      this.drawingService.fitViewToAllFeatures();
+    }
+  }
 
   protected override afterMapInitialized(map: Map): void {
     this.map = map;
-    this.redraw();
+    this.drawingService.clearAll();
 
-    // Bubble map ready
-    this.mapReadyEvent.emit(map);
-
-    // Handle feature clicks
-    this.drawingService.featureClick$.subscribe((f) => {
-      const props = f.getProperties() as any;
-      const dto = props['featureDto'] as FeatureDto | undefined;
-      if (dto) {
-        this.featureSelected.emit(dto);
-      }
-    });
-  }
-
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['camp'] || changes['features']) {
+    // Falls Daten beim Map-Init schon vorhanden sind
+    if (this.camp || this.features?.length) {
       this.redraw();
+      this.drawingService.fitViewToAllFeatures();
     }
   }
 
   private redraw(): void {
     if (!this.map) return;
+
+    // WICHTIG: Alles löschen
     this.drawingService.clearAll();
 
-    // Camp location
+    console.log('[CampMainMapView] redraw camp:', this.camp?.id, 'features:', this.features?.length);
+
+    // 1. Camp location zeichnen
     if (this.camp?.location) {
-      const campName = this.camp.name ?? (this.camp as any)?.campName ?? 'Camp';
-      const loc = this.campMapHelper.featureFromDto(this.camp.location, {
+      const campName = this.camp.name ?? 'Camp';
+      const locationFeature = this.campMapHelper.featureFromDto(this.camp.location, {
         kind: 'camp-location',
         name: campName,
       });
-      this.campMapHelper.applyCampLabelStyle(loc, campName);
-      this.drawingService.addFeature(loc);
+      this.campMapHelper.applyCampLabelStyle(locationFeature, campName);
+      this.drawingService.addFeature(locationFeature);
     }
 
-    // Camp delimitation
+    // 2. Delimitation zeichnen
     const delim = (this.camp as any)?.delimitation ?? (this.camp as any)?.Delimitation;
     if (delim?.zone) {
       const delimFeature = this.campMapHelper.featureFromDto(delim.zone, {
@@ -73,25 +69,28 @@ export class CampMainMapView extends BaseCampMapView implements OnChanges {
       this.drawingService.addFeature(delimFeature);
     }
 
-    // Features
+    // 3. Features zeichnen
     (this.features ?? []).forEach((f) => {
-      const feature = this.campMapHelper.featureFromDto(f.geometry, {
+      const olFeature = this.campMapHelper.featureFromDto(f.geometry, {
+        id: f.id,
+        campId: f.campId,
         kind: f.kind,
         name: f.name,
         color: f.color,
+        lengthM: f.lengthM ?? 40,
+        widthM: f.widthM ?? 20,
+        headingDeg: f.headingDeg ?? 0,
+        icon: f.icon,
       });
-      this.drawingService.addFeatureWithMetadata(feature as Feature<Geometry>, {
-        featureDto: f,
-      });
+
+      // Metadata speichern für Click-Handling später
+      olFeature.set('featureDto', f);
+
+      this.drawingService.addFeature(olFeature as Feature<Geometry>);
     });
 
-    // size update + fit to all features
     try {
       this.map.updateSize();
-    } catch (e) {
-      // ignore
-    }
-    this.fitViewToAllFeatures();
-    setTimeout(() => this.fitViewToAllFeatures(), 50);
+    } catch {}
   }
 }

@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Output, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,6 +18,9 @@ export class MapToolbarComponent {
   @Output() refresh = new EventEmitter<void>();
   @Output() save = new EventEmitter<void>();
   @Output() openCampInfo = new EventEmitter<void>();
+
+  /** User wants to place a new tent (1 click on map). */
+  @Output('drawTentReqeusted') drawTentRequested = new EventEmitter<void>();
 
   onDraw(kind: string): void {
     this.startDraw.emit(kind);

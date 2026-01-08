@@ -22,7 +22,7 @@ export class MapComponent implements AfterViewInit {
 
 
   ngAfterViewInit(): void {
-    const [webMercatorX, webMercatorY] = this.coordinateService.gpsToWebMercator(8.898, 47.5558);
+    const [webMercatorX, webMercatorY] = this.coordinateService.gpsToWebMercator(8.2266, 46.8011);
 
     this.map = new Map({
       target: this.mapContainer.nativeElement,
@@ -36,12 +36,11 @@ export class MapComponent implements AfterViewInit {
       view: new View({
         projection: "EPSG:3857",
         center: [webMercatorX, webMercatorY],
-        zoom: 12,
-        minZoom: 8,
+        zoom: 8,
+        minZoom: 6,
         maxZoom: 18,
       }),
     });
-    console.log("ol map createt in ngAfterViewInit.")
     this.mapReady.emit(this.map);
   }
 
